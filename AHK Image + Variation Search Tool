@@ -79,7 +79,7 @@ SelectFile(File, extension)
 		StringRight, nameOfFile, %File%, %FileString%
 		
 		Clipboard := nameOfFile
-		return
+		return FolderPath
 	}
 
 ; -------------------------------------------------------------------------
@@ -88,7 +88,7 @@ SelectFile(File, extension)
 
 SelectImg:
 {
-	SelectFile("ImgFile", "*")
+	folder := SelectFile("ImgFile", "*")
 	nameOfFile := Clipboard
 	Gui, Add, Text, x16 y50 w300 h34, %ImgFile%
 	return
@@ -100,7 +100,6 @@ ImgSearch:
 	WinMinimize, %AHKTitle%
 		While (%A_Index% < 256)
 	{
-		;~ Imagesearch, outX, outY, 0, 0, %A_ScreenWidth%, %A_ScreenHeight%, *%A_Index% %ImgFile% *TransWhite
 		Imagesearch, outX, outY, 0, 0, %A_ScreenWidth%, %A_ScreenHeight%, *%A_Index% %ImgFile%
 		If errorLevel = 0
 		{
@@ -111,7 +110,7 @@ ImgSearch:
 			Gui, Add, Edit, x82 y160, %VarString%
 			
 		    removeExtension("nameOfFile")
-		    Clipboard := . "`n  Imagesearch, outX, outY, 0, 0, %A_ScreenWidth%, %A_ScreenHeight%, *" . A_Index . " %A_WorkingDir%\" . nameOfFile 
+		    Clipboard := "`n  Imagesearch, outX, outY, 0, 0, %A_ScreenWidth%, %A_ScreenHeight%, *" . A_Index . " " Folder . nameOfFile 
 		   				 . "`n  If errorLevel = 0 "
 						 . "`n  { "
 						 . "`n       `;~ MouseMove, " . OutX . ", " . OutY 
@@ -120,6 +119,7 @@ ImgSearch:
 						 . "`n  }"
 						 . "`n  return "
 						 . "`n"
+
 			ClipWait
 			ToolTip,The code to search for this image in AHK is copied to your clipboard!
 			Sleep, 4000
