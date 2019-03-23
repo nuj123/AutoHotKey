@@ -1,5 +1,5 @@
 # AutoHotKey
-The two files are to help debug. 
+The two files are to help debug: 
 
 * Detect basic assigned-variables
 * Detect basic assigned-arrays
