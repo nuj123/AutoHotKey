@@ -67,38 +67,3 @@ DetectVars()
 
     return
 }
-
-SendClip(str)
-{
-	Sleep, 50
-	; Backup the current clipboard
-	clipBak		:= ClipboardAll
-	; Blank out the current clipboard
-	Clipboard	:= ""
-	; Assign string to clipboard
-	Clipboard	:= str
-	; Wait for text to be there
-	ClipWait
-	; Small pause
-	Sleep, 50
-	; Send paste
-	SendInput, {Ctrl Down}v{Ctrl Up}
-	; Another small pause
-	Sleep, 50
-	; Restore clipboard from backup
-	Clipboard	:= clipBak
-	; Release backup data
-	clipBak		:= ""
-return
-}
-
-removeDuplicates(arr) 
-{ ; Hash O(n) 
-    hash := {}, newArr := []
-
-for e, v in arr
-        if (!hash.Haskey(v))
-            hash[(v)] := 1, newArr.push(v)
-
-    return newArr
-}
