@@ -1,0 +1,337 @@
+/*
+By: nou
+Version 1.0
+*/
+
+#SingleInstance, Force
+SetControlDelay, -1
+CoordMode, Mouse
+CoordMode, Pixel
+CoordMode, ToolTip
+
+x:=y:=w:=h:= 0
+
+OnExit("Exit")
+
+setTimer, ToolTips, 10
+; region 1
+Gui, Pix:Add, GroupBox, x20 y10 w280 h70 , Get Color
+Gui, Pix:Add, Button, x30 y30 w80 h30 gGetColor , (1) Get Color
+Gui, Pix:Add, Text, x115 y25 w80 h20 vpixColor center, Color:
+Gui, Pix:Add, Progress, x125 y40 w70 h20 vBackgroundColor ; backgroundBlack
+Gui, Pix:Add, Text, x205 y25 w85 h20 vVariation center, Variation: 0
+Gui, Pix:Add, Slider, x210 y40 w80 h20 vpixVariation gpixVariation +Range0-255 ToolTip AltSubmit, 0
+
+; region 2
+Gui, Pix:Add, GroupBox, x20 y090 w280 h65, Get Region
+Gui, Pix:Add, Button, x30 y110 w80 h30 gSelectArea, (2) Select Area
+Gui, Pix:Add, CheckBox, x180 y100 w100 h30 vShowArea gShowArea Checked, Show Area
+Gui, Pix:Add, Text, x120 y130 w170 h20 center vcoordinates, X: 0 | Y: 0 | W: 0 | H: 0
+
+; region 3: Get Region
+Gui, Pix:Add, GroupBox, x20 y165 w120 h110 , (3) Action
+Gui, Pix:Add, Radio, x30 y185  h20 vShowLocation gAction checked, Show Location
+Gui, Pix:Add, Radio, x30 y205  h20 vMoveMouse gAction , Move mouse only
+Gui, Pix:Add, Radio, x30 y225  h20 vClickIt gAction , Click it
+
+
+Gui, Pix:Add, Text, x45 y248 h20 vX, X:
+Gui, Pix:Add, Edit, x60 y245 w25 h20 vXoffSet, 0
+Gui, Pix:Add, Text, x95 y248 h20 vY, Y:
+Gui, Pix:Add, Edit, x110 y245 w25 h20 vYoffSet, 0
+; hides the offset dialogues until needed
+GuiControl, Pix: Hide, X
+GuiControl, Pix: Hide, XoffSet
+GuiControl, Pix: Hide, Y
+GuiControl, Pix: Hide, YoffSet
+
+Gui, Pix:Add, GroupBox, x20 y285 w280 h50, (5) Delay between each iteration
+Gui, Pix:Add, Edit, x30 y305 w80 h20 +Number
+Gui, Pix:Add, UpDown, vSleepRange Range1-1000000 gDelayCalc Wrap, 1
+Gui, Pix:Add, Radio, x115 y308 vdelaySeconds gDelayCalc Group Checked, seconds (s)
+Gui, Pix:Add, Radio, x195 y308 vdelayMilliSeconds gDelayCalc, milliseconds (ms)
+
+Gui, Pix:Add, Button, x20 y350 w80 h30 gStart vStart, [F1] Start
+Gui, Pix:Add, Button, x120 y350 w80 h30 gReload, [F8] Reload
+Gui, Pix:Add, Button, x220 y350 w80 h30 gStop, [F12] Stop
+Gui, Pix:Add, StatusBar, ,  Press [Esc] to exit
+
+Gui, Pix: +AlwaysOnTop
+Gui, Pix:Show, w320 h415, Pixel Hunter
+return
+
+GuiClose:
+ExitApp
+
+F1::
+Start:
+Gui, Submit, NoHide
+sleepDelay := sleepRange * ((delaySeconds * 1000) + (delayMilliSeconds))
+SetTimer, PixelStart, % (varToggle:=!varToggle) ? sleepDelay : "OFF"
+GuiControl, Pix:Text, Start, % (varStart:=!varStart) ? "[F1] Pause" : "[F1] Start"
+return
+
+F8::
+Reload:
+Reload
+Return
+
+F12::
+Stop: 
+varToggle:=!varToggle
+SetTimer, PixelStart, Off
+GuiControl, Pix:Text, Start, % (varStart:=!varStart) ? "[F1] Pause" : "[F1] Start"
+Return
+
+Esc::ExitApp
+
+; ----------------------- directives ----------------------------
+; This is triggered from "getting the color" button. Label: GetColor
+#if GetColorVar = 1
+RButton::
+SetTimer, PixelGet, Off
+GetColorVar := 0
+ToolTipGrabColor := 0
+return
+
+; triggered from the "Select Area" button. 
+#if varSelectRegion = 1
+RButton::
+  SetTimer, UpdateRegion, 10
+  MouseGetPos, initialX, initialY
+    while GetKeyState("RButton")
+    {
+        MouseGetPos, EndX, endY
+    Sleep, 10
+    }
+DrawRect(initialX, initialY, endX, endY)
+
+goSub ShowArea
+  setTimer, UpdateRegion, Off
+  toolTipSelectRegion := 0
+  varSelectRegion := 0
+return
+  
+#If
+
+;----------------------- Labels----------------------------------
+
+delayCalc:
+sleepDelay := sleepRange * ((delaySeconds * 1000) + (delayMilliSeconds))
+Return
+
+PixelStart:
+PixelSearch, pixX, pixY, %initialX%, %initialY%, %endX%, %endY%, %pixColor%, %pixVariation%, fast RGB
+  If ErrorLevel = 1
+    MouseTip2(0,0,0) 
+  If ErrorLevel = 0
+  {      
+      if ClickIt = 1
+      {
+        MouseTip2(0,0,0)
+        xAdj := pixX + XoffSet, yAdj := pixY + YoffSet
+        MouseClick, Left, %xAdj%, %yAdj%, 1, 0
+      }
+      
+      else if MoveMouse = 1
+      {
+        MouseTip2(0,0,0)
+        Mousemove, %pixX%, %pixY%
+      }
+      
+      else if ShowLocation = 1
+        MouseTip2(pixX, pixY, 1)
+      if LoopForever != 1
+         LoopCount++
+  }
+
+Return
+
+Action:
+Gui, Submit, NoHide
+
+if ClickIt = 1
+{   
+  GuiControl, Pix: Show, X
+  GuiControl, Pix: Show, XoffSet
+  GuiControl, Pix: Show, Y
+  GuiControl, Pix: Show, YoffSet
+}
+else if ClickIt = 0
+{   
+  GuiControl, Pix: Hide, X
+  GuiControl, Pix: Hide, XoffSet
+  GuiControl, Pix: Hide, Y
+  GuiControl, Pix: Hide, YoffSet
+}
+
+return
+
+; Forms translucent box on click
+SelectArea:
+varSelectRegion := 1
+ToolTipSelectRegion := 1
+
+ShowArea:
+Gui, Submit, NoHide
+if ShowArea = 1
+{
+  ; draw the borders
+      Loop 4 {
+        Gui, %A_Index%: -Caption +ToolWindow +AlwaysOnTop +LastFound +E0x20
+    WinSet, Transparent, 200
+        Gui, %A_Index%: Color, Green
+    }
+  
+  ; show the borders
+    Gui, 1:Show, % "NA X" x " Y" y " W" w " H" 3
+        Gui, 2:Show, % "NA X" x " Y" y+h-3 " W" w " H" 3
+        Gui, 3:Show, % "NA X" x " Y" y " W" 3 " H" h
+        Gui, 4:Show, % "NA X" x+w-3 " Y" y " W" 3 " H" h
+}
+else
+{
+  Loop 4 {
+  Gui, %A_Index%:Hide
+  }
+}
+return
+
+pixVariation:
+Gui,Pix: Submit, NoHide
+GuiControl, Pix:text, variation, Variation: %pixVariation%
+return
+
+UpdateRegion:
+  x := initialX, y:= initialY, w:= abs(endX - initialX), h := abs(endY - initialY)
+  GuiControl, pix:text, coordinates, X: %x% | Y: %y% | W: %w% | H: %h%
+ return
+
+GetColor:
+getColorVar := 1
+ToolTipGrabColor := 1
+SetTimer, PixelGet, 1
+return
+
+; Settimer to grab coordinates + color
+PixelGet:
+MouseGetPos, mouseX, mouseY
+PixelGetColor, pixColor, %mouseX%, %mouseY%, RGB
+
+; removes the "0x" from the "0xRRGGBB"
+bgColor := subStr(pixColor, 3)
+GuiControl, Pix:text, pixColor, %pixColor% 
+GuiControl, Pix:+BackGround%pixColor%, BackgroundColor, 0
+Gui, Submit, NoHide
+return
+
+; update tooltips
+ToolTips:
+; Gives notification about grabbing color
+if ToolTipGrabColor = 1
+  ToolTip, [Right Click] to get `n%pixColor% @ %mouseX%`, %mouseY%,,,1
+else if ToolTIpGrabColor = 0
+  ToolTip,,,,1
+if ToolTipSelectRegion = 1
+  ToolTip, Click+drag with the Right Mouse Button to select your area,,,2
+else if ToolTipSelectRegion = 0
+  ToolTip,,,,2
+
+; Gives notification about screen area
+return
+
+
+
+; ---------------------- Functions -------------------------------
+
+PixGuiClose:
+ExitApp
+
+MouseTip2(x, y, destroyVar:=1) {
+  if destroyVar = 1
+  {
+    radius := 10
+    x:=Round(x-radius), y:=Round(y-radius), w:=h:=2*radius+1
+    ;-------------------------
+    Gui, _MouseTip2_: Destroy
+    Gui, _MouseTip2_: +AlwaysOnTop -Caption +ToolWindow +Hwndmyid +E0x08000000
+    Gui, _MouseTip2_: Color, Red
+    Gui, _MouseTip2_: Show, Hide w%w% h%h%
+    ;-------------------------
+    dhw:=A_DetectHiddenWindows
+    DetectHiddenWindows, On
+    d:=4, i:=w-d, j:=h-d
+    s=0-0 %w%-0 %w%-%h% 0-%h% 0-0
+    s=%s%  %d%-%d% %i%-%d% %i%-%j% %d%-%j% %d%-%d%
+    WinSet, Region, %s%, ahk_id %myid%
+    DetectHiddenWindows, %dhw%
+    ;-------------------------
+    Gui, _MouseTip2_: Show, NA x%x% y%y%
+    Sleep, 10
+  }
+
+  else if destroyVar = 0
+    Gui, _MouseTip2_: Destroy
+  
+  return
+}
+
+DrawRect(ByRef X1, ByRef Y1, ByRef X2, ByRef Y2)
+{
+    static r := 3
+    ; Create the "selection rectangle" GUIs (one for each edge).
+    Loop 4 {
+        Gui, %A_Index%: -Caption +ToolWindow +AlwaysOnTop +LastFound
+    WinSet, Transparent, 100
+        Gui, %A_Index%: Color, Green
+    }
+  
+  Gui, 5: -Caption +ToolWindow +AlwaysOnTop +LastFound
+  WinSet, Transparent, 50
+  Gui, 5: Color, red
+  
+    
+  ; Disable RButton.
+    Hotkey, *RButton, lusr_return, On
+    ; Wait for user to press RButton.
+    KeyWait, RButton, D
+    ; Get initial coordinates.
+    MouseGetPos, xorigin, yorigin
+    ; Set timer for updating the selection rectangle.
+    SetTimer, lusr_update, 10
+    ; Wait for user to release RButton.
+    KeyWait, RButton
+    ; Re-enable RButton.
+    Hotkey, *RButton, Off
+    ; Disable timer.
+    SetTimer, lusr_update, Off
+    ; Destroy "selection rectangle" GUIs.
+    Loop 5
+        Gui, %A_Index%: Destroy
+    return
+ 
+    lusr_update:
+        MouseGetPos, x, y
+        if (x = xlast && y = ylast)
+            ; Mouse hasn't moved so there's nothing to do.
+            return
+        if (x < xorigin)
+             x1 := x, x2 := xorigin
+        else x2 := x, x1 := xorigin
+        if (y < yorigin)
+             y1 := y, y2 := yorigin
+        else y2 := y, y1 := yorigin
+        ; Update the "selection rectangle".
+        Gui, 1:Show, % "NA X" x1 " Y" y1 " W" x2-x1 " H" r
+        Gui, 2:Show, % "NA X" x1 " Y" y2-r " W" x2-x1 " H" r
+        Gui, 3:Show, % "NA X" x1 " Y" y1 " W" r " H" y2-y1
+        Gui, 4:Show, % "NA X" x2-r " Y" y1 " W" r " H" y2-y1
+    Gui, 5:Show, % "NA X" x1 " Y" y1 " W" abs(x2-x1) " H" abs(y2-y1)
+    lusr_return:
+    return
+}
+
+Exit()
+{
+  ExitApp
+}
