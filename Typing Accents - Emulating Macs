@@ -1,0 +1,274 @@
+/*
+  This is an attempt to emulate mac's way of typing in accented characters. 
+ Press alt + {`|e|i|t|u} to prime the keyboard for your accent:
+  ` = grave  
+  e = acute 
+  i = cir  
+  t = tilde  
+  u = umlaut
+
+I.e. Press (Alt+I), then (A)
+*/
+
+#SingleInstance, force 
+#InstallKeybdHook
+SendMode Input
+SetWorkingDir, %A_ScriptDir%
+OnExit("exit")
+
+/*
+	set up our arrays for accent characters: 
+	a, e, i, o, u, n, y
+*/
+
+a := ["{asc 0224}"  ; à
+	, "{asc 0192}"  ; À
+	, "{asc 0225}"  ; á
+	, "{asc 0193}"  ; Á
+	, "{asc 0226}"  ; â
+	, "{asc 0194}"  ; Â
+	, "{asc 0227}"  ; ã
+	, "{asc 0195}"  ; Ã
+	, "{asc 0228}"  ; ä
+	, "{asc 0196}"] ; Ä
+
+e := ["{asc 0232}"	; è
+	, "{asc 0200}" 	; È
+	, "{asc 0233}"	; é
+	, "{asc 0201}"	; É
+	, "{asc 0234}"	; ê
+	, "{asc 0202}"	; Ê
+	, "{asc 0101}"	; e
+	, "{asc 0069}"	; E
+	, "{asc 0235}"	; ë
+	, "{asc 0203}"]	; Ë
+
+i := ["{asc 0236}"	; ì
+	, "{asc 0204}"	; Ì
+	, "{asc 0237}"	; í
+	, "{asc 0205}"	; Í
+	, "{asc 0238}"	; î
+	, "{asc 0206}"	; Î
+	, "{asc 0105}"	; i
+	, "{asc 0073}"	; I
+	, "{asc 0239}"	; ï
+	, "{asc 0207}"]	; Ï
+
+o := ["{asc 149}"	; ò
+	, "{asc 0210}"	; Ò
+	, "{asc 0243}"	; ó
+	, "{asc 0211}"	; Ó
+	, "{asc 0244}"	; ô
+	, "{asc 0212}"	; Ô
+	, "{asc 0245}"	; õ
+	, "{asc 0213}"	; Õ
+	, "{asc 0246}"	; ö
+	, "{asc 0214}"]	; Ö
+
+u := ["{asc 151}"	; ù
+	, "{asc 0217}"	; Ù
+	, "{asc 0250}"	; ú
+	, "{asc 0218}"	; Ú
+	, "{asc 150}"	; û
+	, "{asc 0219}"	; Û
+	, "{asc 0117}"	; u
+	, "{asc 0085}"	; U
+	, "{asc 0252}"	; ü
+	, "{asc 0220}"]	; Ü
+
+n := ["{asc 0110}"	; n
+	, "{asc 0078}"	; N
+	, "{asc 0110}"	; n
+	, "{asc 0078}"	; N
+	, "{asc 0110}"	; n
+	, "{asc 0078}"	; N
+	, "{asc 0241}"	; ñ
+	, "{asc 0209}"	; Ñ
+	, "{asc 0110}"	; n
+	, "{asc 0078}"]	; N
+
+y := ["{asc 0121}"	; y
+	, "{asc 0089}"	; Y
+	, "{asc 0253}"	; ý
+	, "{asc 0221}"	; Ý
+	, "{asc 0121}"	; y
+	, "{asc 0089}"	; Y
+	, "{asc 0121}"	; y
+	, "{asc 0089}"	; Y
+	, "{asc 0255}"	; ÿ
+	, "{asc 0159}"]	; Ÿ
+
+/*
+	Set up array for the numbers + keyboard
+*/
+
+Alt := {}
+; keys := no shift , shift 
+Alt.1 := ["{asc 0161}", "{asc 0047}"]
+Alt.2 := ["{asc 0128}", "{asc 0153}"]
+Alt.3 := ["{asc 0163}", "{asc 0139}"]
+Alt.4 := ["{asc 0162}", "{asc 0155}"]
+Alt.5 := ["{asc 236}","{U+FB01}"]
+Alt.6 := ["{asc 0167}","{U+FB02}"]
+Alt.7 := ["{asc 0182}", "{asc 0135}"]
+Alt.8 := ["{asc 0149}", "{asc 248}"]
+Alt.9 := ["{asc 166}", "{asc 0183}"]
+Alt.0 := ["{asc 0186}", "{asc 0130}"]
+
+Alt.a := ["{asc 0229}", "{asc 0197}"]
+Alt.b := ["{U+222b}", "{U+0131}"]
+Alt.c := ["{asc 0231}", "{asc 128}"]
+Alt.d := ["{U+2202}", "{asc 0206}"]
+Alt.e := ["{asc 0180}", "{asc 0137}"]
+Alt.f := ["{asc 0131}", "{asc 0207}"]
+Alt.g := ["{asc 0169}", "{asc 0204}"]
+Alt.h := ["{U+02d9}", "{asc 0211}"]
+Alt.i := ["{asc 94}", "{asc 0200}"]
+Alt.j := ["{asc 235}", "{asc 0212}"]
+Alt.k := ["{asc 0176}", "{U+F8FF}"]	; U+F8FF Apple, only on certain fonts
+Alt.l := ["{asc 170}", "{asc 0210}"]
+Alt.m := ["{asc 0181}", "{asc 0152}"]
+Alt.n := ["{asc 126}", "{asc 94}"]
+Alt.o := ["{asc 0248}", "{asc 0216}"]
+Alt.p := ["{asc 227}", "{U+213f}"]
+Alt.q := ["{asc 0156}", "{asc 0140}"]
+Alt.r := ["{asc 0174}", "{asc 0194}"]
+Alt.s := ["{asc 0223}", "{asc 0205}"]
+Alt.t := ["{asc 0134}", "{asc 0202}"]
+Alt.u := ["{asc 0168}", "{asc 0203}"]
+Alt.v := ["{asc 118}", "{U+25ca}"]
+Alt.w := ["{asc 238}", "{asc 0132}"]
+Alt.x := ["{asc 247}", "{asc 0217}"]
+Alt.y := ["{asc 157}", "{asc 0193}"]
+Alt.z := ["{asc 234}", "{asc 0219}"]
+
+Alt.Minus := ["{asc 0150}", "{asc 0151}"]
+Alt.Equal := ["{U+2260}", "{asc 0177}"]
+Alt.OBracket := ["{asc 0147}", "{asc 0148}"]
+Alt.CBracket := ["{asc 0145}", "{asc 0146}"]
+Alt.SemiColon := ["{asc 0133}", "{asc 0218}"]
+Alt.Tick := ["{asc 145}", "{asc 146}"]
+Alt.BackSlash := ["{asc 0171}", "{asc 175}"]
+Alt.Comma := ["{asc 243}", "{asc 0175}"]
+Alt.Period := ["{asc 242}", "{U+02d8}"]
+Alt.Slash := ["{asc 246}", "{asc 168}"]
+
+; make an array for all the keys we're going to use for hotkey
+keyboard := ["a", "b", "c", "d" 
+		  ; , "e", "i", "t", "u" , "``"  
+			, "f", "g", "h" 
+			, "j", "k", "l", "m", "n"
+			, "o", "p", "q", "r", "s" 
+			, "v", "w", "x", "y", "z"
+			, "0", "1", "2", "3", "4"
+			, "5", "6", "7", "8", "9"  
+			, "-", "=", "`[", "`]",  "`.", "`/"
+			, "`;", "`\", "`,"]
+
+; commented out keys: 
+; e, i, t, u, `
+; they're used for the accented characters. 
+
+; -------------------------------------------
+;				 grave  acute cir  t~  umlaut
+AccentLetters := ["``", "e", "i", "t", "u"]
+
+; create hotkeys for these keys on the keyboard.
+for index, key in keyboard
+	Hotkey, % "*!" key, NonAccentCharacters, On
+
+; create hotkeys for the accents on the keyboard.
+for index, key in AccentLetters
+	HotKey, % "*!" key, AccentCharacters
+
+; -------------------------------------------
+; accents over letters:
+AccentCharacters:
+KeyPressed := A_ThisHotKey
+
+; check if "Shift" is pressed. Need this info for when it times out. 
+if (GetKeyState("Shift"))
+	shiftState := 1
+Else
+	shiftState := 0
+
+; sets up an inputbox to catch the character. 
+; L1 = limit to one character, t2 = Timeout of 2 seconds, c = case sensitive. 
+Input, char, L1 T2 C M
+
+; if it times out, then send the original keys 
+If (ErrorLevel = "TimeOut")
+{
+	KeyPressed := StrReplace(A_ThisHotkey, "*!")
+	Send % alt[KeyPressed][1+ShiftState]
+}
+
+; checks to make sure we're pressing only the "a, e, i, o, u, n, & y" keys
+else if (char = "a") || (char = "e") || (char = "i") || (char = "o") || (char = "u") || (char = "n") || (char = "y")
+{
+	; check if "Shift" is pressed again, just in case. 
+	if (GetKeyState("Shift"))
+		shiftState := 1
+	Else
+		shiftState := 0
+	; determines which column to use
+	if InStr(KeyPressed, "!``")
+		column := 1 + shiftState
+	else if InStr(KeyPressed, "!e")
+		column := 3 + shiftState
+	else if InStr(KeyPressed, "!i")
+		column := 5 + shiftState
+	else if InStr(KeyPressed, "!t")
+		column := 7 + shiftState
+	else if InStr(KeyPressed, "!u")
+		column := 9 + shiftState
+
+	send % %char%[column]
+}
+
+; if we're not pressing any of those keys, go ahead and send our keypress.
+Else
+	Send % char
+Return
+
+; non-accent characters. 
+NonAccentCharacters:
+KeyPressed := StrReplace(A_ThisHotkey, "*!")
+	; check if "Shift" is pressed
+	if (GetKeyState("Shift"))
+		shiftState := 1
+	Else
+		shiftState := 0
+
+; replace symbols with letters so we can use it in the array 
+if (KeyPressed = "=")
+	keypressed := "Equal"
+else if (KeyPressed = "[")
+	keyPressed := "OBracket"
+else if (KeyPressed = "]")
+	keyPressed := "CBracket"
+else if (KeyPressed = ";")
+	keyPressed := "SemiColon"
+else if (KeyPressed = "``")
+	keyPressed := "Tick"
+else if (KeyPressed = "\")
+	keyPressed := "BackSlash"
+else if (KeyPressed = ",")
+	keyPressed := "Comma"
+else if (KeyPressed = ".")
+	keyPressed := "Period"
+else if (KeyPressed = "/")
+	keyPressed := "Slash"
+
+Send % alt[KeyPressed][1+ShiftState]
+Return
+
+; ---------- Functions --------
+Exit()
+{
+	ExitApp
+}
+; ---------- --------- --------
+
+F8::Reload
+^`::Exit()
