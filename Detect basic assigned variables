@@ -1,0 +1,104 @@
+; makes the hotkey active only on Sublime Text
+; #ifWinActive, ahk_class PX_WINDOW_CLASS ahk_exe sublime_text.exe
+; types in "/var" to check all variables
+:X:/var::DetectVars()
+; #if 
+
+DetectVars()
+{
+    ;Clipboard Function
+    oldClip := ClipboardAll
+    Clipboard := ""
+    Send ^+{home}^c
+    ClipWait
+    send {right}
+
+    ; replaces all "commas" with a linefeed, in case there's multiple variables per line. 
+    str := StrReplace(clipboard, "`,", "`n")
+
+    ; adds a new line before each comment. In case there's a comment after a variable
+    str := StrReplace(str, "`;", "`n`;")
+
+    ; creates array with "str" for each and every line. 
+    str := StrSplit(str, "`n") ; comment here
+
+    ; restores clipboard
+    Clipboard := oldClip
+
+    ; array time
+    varStr := []
+
+    ; searches for all ":=" in our "str" array
+    For k, v in Str
+    {
+    ; could probably do an array for this
+        if InStr(v, ";") = 0        ; we don't need commented lines
+            if InStr(v, "Clipboard") = 0        ; makes sure it's not clipboard-related
+                if InStr(v, "For") = 0              ; makes sure it's not in a "For" loop 
+                    if InStr(v, ":=") != 0          ; makes sure it has a ":=" in there.
+                        if (RegExMatch(v, "\w\(")=0)    ; no letters+parenthesis (arrays)
+                            if InStr(v, "[") = 0                    ; no brackets (no arrays)
+                                if InStr(v, "{") = 0                ; no brackets (no arrays)
+                                    varStr.push(LTRIM(RTRIM(StrSplit(v, ":=")[1])))
+    }
+
+    ; Remove Duplicates
+    trimmedArray := removeDuplicates(varStr)    
+        
+    newStr := "MsgBox % ""Variables:``n""" "`n"
+    For k, v in trimmedArray
+        if v != `"      ; makes sure that there's no single "double quote"
+            newStr .= " . ""- " v " : "" " v " ""``n""" "`n"
+
+    ; remove the last character (the last linebreak)
+    newStr := SubStr(newStr,1,-1)
+
+    ;Clipboard Function
+    oldClip := ClipboardAll
+    Clipboard := ""
+    ClipBoard := newStr
+    ClipWait
+    Sleep, 50
+
+    Send ^v{enter 2}
+    sleep, 50
+    ; restores clipboard
+    Clipboard := oldClip
+
+    return
+}
+
+SendClip(str)
+{
+	Sleep, 50
+	; Backup the current clipboard
+	clipBak		:= ClipboardAll
+	; Blank out the current clipboard
+	Clipboard	:= ""
+	; Assign string to clipboard
+	Clipboard	:= str
+	; Wait for text to be there
+	ClipWait
+	; Small pause
+	Sleep, 50
+	; Send paste
+	SendInput, {Ctrl Down}v{Ctrl Up}
+	; Another small pause
+	Sleep, 50
+	; Restore clipboard from backup
+	Clipboard	:= clipBak
+	; Release backup data
+	clipBak		:= ""
+return
+}
+
+removeDuplicates(arr) 
+{ ; Hash O(n) 
+    hash := {}, newArr := []
+
+for e, v in arr
+        if (!hash.Haskey(v))
+            hash[(v)] := 1, newArr.push(v)
+
+    return newArr
+}
