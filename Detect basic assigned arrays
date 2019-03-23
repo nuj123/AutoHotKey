@@ -1,7 +1,8 @@
-#ifWinActive, ahk_class PX_WINDOW_CLASS ahk_exe sublime_text.exe
+; adjust this as needed
+; #ifWinActive, ahk_class PX_WINDOW_CLASS ahk_exe sublime_text.exe
 ; type in /array to theoretically find all arrays 
 :x:/array::FindArrays()
-#if 
+; #if 
 
 
 FindArrays()
