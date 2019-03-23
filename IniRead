@@ -1,0 +1,117 @@
+/*
+ another ini_read to object creater. 
+ 
+ example: iniRead("config.ini")
+ 
+ This iniRead() works with .ini/.txt files in the format of:
+ 
+ [section]
+ key=value
+ key = value
+ 
+ If the very first line isn't a section, it'll fail out. 
+ I debated about throwing the name "default" for the very first 
+ section, but decided not to. 
+ 
+ Once you call the function, you can then refer to each variable
+ as "section.key" to get the "value". 
+ 
+ IMPORTANT: only call the function once per file! It generates 
+ super global associative arrays that may/maynot conflict with 
+ other future generations of the same file. 
+ 
+ If my .ini file has: 
+ **********
+ [Fish]
+ Red=3
+ White = 5
+ orange =18
+ 
+ [flowers]
+ pink = 5
+ green= 4
+ ************
+ 
+ if I want to find the value under the section "Flowers", and how
+ many greens, I would do "flowers.green" 
+ 
+ MsgBox % flowers.green
+ 
+ and that will display "4". If I want to look for "Fish", with Key of "White"
+ I would do "fish.white" to get the value of "5".
+ 
+ To get a list of sections into an array "SectionList", do this:
+ 
+ sectionList := iniRead("config.ini")
+ 
+ string := ""
+ for index, Section in SectionList
+    string .= Index ": " Section
+ 
+ MsgBox % string
+ 
+*/
+
+IniRead(filename)
+{
+; ************************* Read File *************************
+
+	iniFile := FileOpen(filename, "r")
+	ini := iniFile.read()
+	ini.close()
+
+; ********************* String Replace ************************
+
+	; gives every comment it's own new line
+	ini := StrReplace(ini, ";", "`r`n;")
+
+	; removes all lines that starts with ; 
+	ini := RegExReplace(ini, ";.*")
+
+	; replaces all (`r`n) with (`n)
+	ini := StrReplace(ini, "`r`n", "`n")
+
+	; removes all doublespacings
+	outCount := 1
+	While (outCount != 0)
+		ini := StrReplace(ini, "`n`n", "`n", OutCount)
+
+; *************************************************************
+
+	; splits by the `n
+	arrayIni := StrSplit(ini, "`n")
+
+	; makes an array to keep track of our Sections
+	SectionList := []
+
+; ********************* Getting the Info **********************
+
+	; enumerate array + variables
+	for key, value in arrayIni
+		{
+			; Regex search for starting "[" and ending "]"
+			RegExMatch(trim(value), "^\[.*?]$", checkSection)
+			if (trim(value) = checkSection)
+			{
+				; remove the first and last characters, the brackets. 
+				section := substr(checkSection, 2, -1)
+
+				; adds this into our list of Sections
+				SectionList.push(section)
+
+				; if found, create a new array with that as an array name. 
+				%section% := {}
+			}
+			else 
+				{
+					; splits the line by the "=" sign. 
+					newKey := StrSplit(value, "=")
+
+					; stores the left + right values into our array, respectively.
+					%section%[TRIM(newKey.1)] := TRIM(newKey.2)
+				}
+
+		}
+
+	return SectionList
+}
