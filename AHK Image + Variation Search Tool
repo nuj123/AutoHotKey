@@ -1,0 +1,140 @@
+#SingleInstance Force
+AHKTitle := "Image and Variation Finder"
+SetControlDelay -1
+CoordMode, Mouse
+Coordmode, pixel
+
+WinHeight := 300
+WinWidth := 420
+
+; -------------------------------------------------------------------------
+; Tab Names
+; -------------------------------------------------------------------------
+Gui, Add, GroupBox, x6 y30 w400 h55, Select the picture you want to search for
+Gui, Add, Text, x16 y50 w300 h20 , No file currently selected!
+Gui, Add, Button, x326 y50 w70 h20 gSelectImg, Browse
+Gui, Add, GroupBox, x6 y90 w400 h55, Search for Picture on Screen:
+Gui, Add, Button, x50 y110 gImgSearch, Click here to minimize this program and start searching for the image
+
+WinWidth2 := WinWidth - 4
+Gui, Show, w%WinWidth2% h%WinHeight%, %AHKTitle%
+return
+
+GuiClose:
+ExitApp
+
+SubmitGUIglobal:
+{
+	Gui, Submit, NoHide
+	return
+}
+
+removeExtension(file)
+{
+	{
+		; Browse to file
+		
+		; Find out what the length of the string is
+		StringLen, StringLength, %File%
+		
+		; Finds out where the last backslash is, and add 1 to that count since this is where your file path ends, and file name begins. 
+		StringGetPos, StringPosition, %File%, ., R
+		
+		; Finds out how long the string length of the folder path is
+		FileString := StringLength - StringPosition
+		
+		; Stores the folder path of your originally selected file into the variable FolderPath
+		StringLeft, nameOfFileOnly, %File%, %StringPosition%
+		
+		; Stores the file name of your originally selected file into the variable FileName
+		StringRight, nameOfFileExtension, %File%, %FileString%
+		
+		Clipboard := nameOfFileOnly
+		return
+	}	
+}
+
+SelectFile(File, extension)
+	{
+		; Browse to file
+		
+		extension := "*." . extension
+		
+		FileSelectFile, %File%, , , , %extension%
+		
+		; Find out what the length of the string is
+		StringLen, StringLength, %File%
+		
+		; Finds out where the last backslash is, and add 1 to that count since this is where your file path ends, and file name begins. 
+		StringGetPos, StringPosition, %File%, \, R
+		StringPosition += 1
+		
+		; Finds out how long the string length of the folder path is
+		FileString := StringLength - StringPosition
+		
+		; Stores the folder path of your originally selected file into the variable FolderPath
+		StringLeft, FolderPath, %File%, %StringPosition%
+		
+		; Stores the file name of your originally selected file into the variable FileName
+		StringRight, nameOfFile, %File%, %FileString%
+		
+		Clipboard := nameOfFile
+		return
+	}
+
+; -------------------------------------------------------------------------
+; Image Search
+; -------------------------------------------------------------------------
+
+SelectImg:
+{
+	SelectFile("ImgFile", "*")
+	nameOfFile := Clipboard
+	Gui, Add, Text, x16 y50 w300 h34, %ImgFile%
+	return
+}
+
+ImgSearch:
+{
+	Sleep, 500
+	WinMinimize, %AHKTitle%
+		While (%A_Index% < 256)
+	{
+		;~ Imagesearch, outX, outY, 0, 0, %A_ScreenWidth%, %A_ScreenHeight%, *%A_Index% %ImgFile% *TransWhite
+		Imagesearch, outX, outY, 0, 0, %A_ScreenWidth%, %A_ScreenHeight%, *%A_Index% %ImgFile%
+		If errorLevel = 0
+		{
+			VarString := "Img found at " . OutX . "x  " . OutY . "y with Var = " . A_Index
+			MouseMove, %outX%, %outY%
+			WinActivate, %AHKTitle%
+			Gui, Tab, %Tab2%
+			Gui, Add, Edit, x82 y160, %VarString%
+			
+		    removeExtension("nameOfFile")
+		    Clipboard := . "`n  Imagesearch, outX, outY, 0, 0, %A_ScreenWidth%, %A_ScreenHeight%, *" . A_Index . " %A_WorkingDir%\" . nameOfFile 
+		   				 . "`n  If errorLevel = 0 "
+						 . "`n  { "
+						 . "`n       `;~ MouseMove, " . OutX . ", " . OutY 
+						 . "`n        MouseMove, %outX%, %outY%"
+						 . "`n       `;~ MouseClick, Left, %outX%, %outY%"
+						 . "`n  }"
+						 . "`n  return "
+						 . "`n"
+			ClipWait
+			ToolTip,The code to search for this image in AHK is copied to your clipboard!
+			Sleep, 4000
+			ToolTip
+			break
+			Return
+		}
+		If ErrorLevel = 1
+		{
+			ToolTip, Var = %A_Index%
+		}
+	}
+	return
+}
+
+F8::Reload
+
+Esc::ExitApp
