@@ -1,0 +1,120 @@
+#ifWinActive, ahk_class PX_WINDOW_CLASS ahk_exe sublime_text.exe
+; type in /array to theoretically find all arrays 
+:x:/array::FindArrays()
+#if 
+
+
+FindArrays()
+{
+	oldClip := ClipboardAll
+	Clipboard := ""
+	Send ^+{home}^c
+	ClipWait
+	send {right}
+	sleep, 50
+	workingString := Clipboard
+	Clipboard := oldClip
+
+	regex := []
+	list := StrSplit(workingString, "`n")
+			; Array[] := ""
+	regex := ["O)(?P<ArrayName>^.*?):=.*?Array\(.*?$"	
+			; Array[Index] := Value
+			, "O)(?P<ArrayName>^.*?)\[.*?:="
+			; Array := [Item1, Item2, ..., ItemN]
+			, "O)(?P<ArrayName>.*?):=.*?\[.*?,"
+			; Value := Array[Index]
+   			; ReturnValue := Object[MethodName](Parameters)
+   			, "O).*?:=(?P<ArrayName>.*?[^ ])\[.*?$"
+   			; Array.InsertAt(Index, Value, Value2, ...)
+   			, "O)(?P<ArrayName>[A-z0-9_\.\-]*?)\.(?i)InsertAt\("
+   			; array.push()
+   			, "O)(?P<ArrayName>[A-z0-9_\.\-]*?)\.(?i)Push\("
+   			; array.pop()
+   			, "O)(?P<ArrayName>[A-z0-9_\.\-]*?)\.(?i)Pop\(\)"
+   			; Array := Object("KeyA", ValueA, "KeyB", ValueB, ..., "KeyZ", ValueZ)
+   			, "O)(?P<ArrayName>^[A-z0-9_\-]*?)\s*:=.*?(?i)Object\("
+   			; RemovedValue := Array.Delete(Key)
+   			, "O)(?P<ArrayName>[A-z0-9_\-]*?)\.(?i)Delete\("
+   			; Array := {KeyA: ValueA, KeyB: ValueB, ..., KeyZ: ValueZ}
+   			, "O)(?P<ArrayName>[A-z0-9_\-]*?)\s?:=\s*{.*?:"]
+   			; any xxx.xxx.
+   			;~ , "O)(?P<ArrayName>[A-z0-9_\-]+?\.([A-z0-9_\-]*?\.)*)([^\s\(])*"]
+
+	str := []
+	for k, v in List
+	{
+		for index, regNum in regex
+		{
+			if RegexMatch(Trim(v), "^;")
+				continue
+			If RegexMatch(v, regNum)
+			{
+				RegExMatch(v, regNum, outVar)
+				if !(RegexMatch(trim(outVar.ArrayName),"^)")) 
+				&& !(RegexMatch(trim(outVar.ArrayName),"^]")) 
+				&& !(RegexMatch(trim(outVar.ArrayName),"^}")) 
+				&& !(RegexMatch(trim(outVar.ArrayName),"^\(")) 
+				&& !(RegexMatch(trim(outVar.ArrayName),"^\{"))
+				&& !(RegexMatch(trim(outVar.ArrayName),"^\["))
+				&& !(RegexMatch(trim(outVar.ArrayName),"^\["))
+				&& !(RegexMatch(trim(outVar.ArrayName),"^"""))
+				&& !(RegexMatch(trim(outVar.ArrayName),"^,"))
+				{
+		        	str.push(TRIM(outVar.ArrayName))
+				}
+			}
+		  
+		    else if (regNum = "O)(?P<ArrayName>[A-z0-9_\-]+?\.([A-z0-9_\-]*?\.)*)([^\s\(])*")
+		    {	
+				if !(RegexMatch(trim(outVar.ArrayName),"^)")) 
+				&& !(RegexMatch(trim(outVar.ArrayName),"^]")) 
+				&& !(RegexMatch(trim(outVar.ArrayName),"^}")) 
+				&& !(RegexMatch(trim(outVar.ArrayName),"^\(")) 
+				&& !(RegexMatch(trim(outVar.ArrayName),"^\{"))
+				&& !(RegexMatch(trim(outVar.ArrayName),"^\["))
+				&& !(RegexMatch(trim(outVar.ArrayName),"^\["))
+				&& !(RegexMatch(trim(outVar.ArrayName),"^"""))
+				&& !(RegexMatch(trim(outVar.ArrayName),"^,"))
+				{
+					RegExMatch(v, regNum, outVar)
+			        str.push(SubSTr(TRIM(outVar.ArrayName),1,-1))
+				}
+		    }
+		}
+	}
+
+	; Remove Duplicates
+	FoundArray := removeDuplicates(str)    
+	
+	if (foundArray.count())
+	{
+		stringVar := "Arrays found:`n`n" 	    
+		for k, v in FoundArray
+			stringVar .= k ") " v "`n"
+
+	;~ ArrayStrings=
+	strFoundArray := "`n;~ Arrays:`n"
+	for k, v in FoundArray
+		{
+			; first line: strArray := ""
+			strFoundArray .= "str" StrReplace(v, ".") " := """" `n"
+			; for k, v in Array
+			. "For k, v in " v "`n"
+					; strArray .= k ": " v "`n"
+					. A_Tab . "str" StrReplace(v, ".") " .= k "":	""	v`n`n"
+			; MsgBox % "Array : ArrayName`n"
+			. "MsgBox % ""Array: " v "``n""`n"
+			; .	"`n " strArray
+			. "	.	""``n "" str" v "`n`n"
+		}
+
+	SendClip(strFoundArray)
+	sleep, 100
+	}
+
+	else
+		stringVar := "No arrays found above"
+	MsgBox % stringVar
+return
+}
