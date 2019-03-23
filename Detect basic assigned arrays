@@ -35,6 +35,8 @@ FindArrays()
    			, "O)(?P<ArrayName>[A-z0-9_\.\-]*?)\.(?i)Pop\(\)"
    			; Array := Object("KeyA", ValueA, "KeyB", ValueB, ..., "KeyZ", ValueZ)
    			, "O)(?P<ArrayName>^[A-z0-9_\-]*?)\s*:=.*?(?i)Object\("
+			; newVar := StrSplit(String, [Delimiters, OmitChars])
+   			, "O)(?P<ArrayName>.*?):=\s*(?i)StrSplit\("
    			; RemovedValue := Array.Delete(Key)
    			, "O)(?P<ArrayName>[A-z0-9_\-]*?)\.(?i)Delete\("
    			; Array := {KeyA: ValueA, KeyB: ValueB, ..., KeyZ: ValueZ}
