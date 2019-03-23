@@ -8,7 +8,16 @@
   u = umlaut
 
 I.e. Press (Alt+I), then (A)
+
+    Additionally, other symbols can be typed using the {Alt} + {letter/number} combination. 
+    
+    For example: {Alt} + {7} = ¶
+       {shift} + {Alt} + {7} = ‡
+       
 */
+
+; set a timeout period of 1 second
+TimeOut := 1
 
 #SingleInstance, force 
 #InstallKeybdHook
@@ -21,7 +30,7 @@ OnExit("exit")
 	a, e, i, o, u, n, y
 */
 
-a := ["{asc 0224}"  ; à
+a := ["{asc 0224}" 	; à
 	, "{asc 0192}"  ; À
 	, "{asc 0225}"  ; á
 	, "{asc 0193}"  ; Á
@@ -194,7 +203,7 @@ Else
 
 ; sets up an inputbox to catch the character. 
 ; L1 = limit to one character, t2 = Timeout of 2 seconds, c = case sensitive. 
-Input, char, L1 T2 C M
+Input, char, L1 T%TimeOut% C M
 
 ; if it times out, then send the original keys 
 If (ErrorLevel = "TimeOut")
