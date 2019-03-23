@@ -1,0 +1,204 @@
+/*
+creates a gui-edit box to the right side of sciTe4AutoHotKey. 
+Each time a command is typed in, it'll look online the command and displays the stripped-down
+version of the webpage. Supports the typing of most commands. Bugs out here and there, but it works. 
+
+
+*/
+
+#NoEnv  ; Recommended for performance and compatibility with future AutoHotkey releases.
+#SingleInstance, Force
+; #Warn  ; Enable warnings to assist with detecting common errors.
+SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
+SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
+
+OnExit("Exit")
+
+if WinExist("ahk_class SciTEWindow ahk_exe SciTE.exe") = 0
+{
+	run "C:\Program Files\AutoHotkey\SciTE\SciTE.exe"
+	WinWaitActive, ahk_class SciTEWindow ahk_exe SciTE.exe
+}
+	
+WinGetPos, x, y, w, h, ahk_class SciTEWindow ahk_exe SciTE.exe
+
+SetTimer, MoveGui, 10
+Sleep, 1000
+
+varMoveGuiToggle:=!varMoveGuiToggle
+
+guiWidth := 300
+guiHeight := h - 8 ; - 40
+displayStart := 10
+
+; ---------------- Make the GUI -----------------
+Gui, SciTe:+LastFound -Caption
+Gui, SciTe: +Owner%hwndINFO%
+
+Gui, SciTe:Add, Edit, % "x5 y" displayStart " w" guiWidth-10 "   h" guiHeight-displayStart-30 " vScroll  vDisplayCommands +ReadOnly", Type a command to look for it on AHK
+Gui, SciTe:Add, StatusBar,,  [F6] Show/Hide		[F7] = Reload
+
+Gui, SciTe:Submit, NoHide
+Gui, SciTe:Show, NA x%guiXposition% y%guiYposition% w%guiWidth% h%guiHeight%, SciTe - Command Companion
+SetTimer, Update, 10
+return
+
+#ifWinActive ahk_class SciTEWindow ahk_exe SciTE.exe
+F6::
+{
+	SetTimer, MoveGui, % (varMoveGuiToggle:=!varMoveGuiToggle) ? 10 : "OFF"
+	if !varMoveGuiToggle
+		Gui, SciTe:Show, Hide
+}
+return
+
+F7::Reload
+ 
++Esc::
+SciTeGuiClose:
+Exit()
+return
+
+;~ CapsLock & Space::
+Update:
+	Input, name, V, {enter}{escape}{space}`,`{`(`[
+
+; if it's an empty string, we don't need it. 
+	if !name
+		return
+
+	;~ InputBox, Name, AHK command, Type in the AHK command to look up, , 250, 150
+
+	whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
+	whr.Open("GET", "https://www.autohotkey.com/docs/commands/" Name ".htm", true)
+	whr.Send()
+	; Using 'true' above and the call below allows the script to remain responsive.
+	whr.WaitForResponse()
+	webPage := whr.ResponseText
+
+	;~ GuiControl, SciTe:Text, displayCommands, % webPage
+	RegexMatch(webPage, "Your client does not have permission to get URL", siteCheck)
+	;~ siteCheck := InStr(webPage, "Your client does not have permission")
+	
+	
+	if (siteCheck = "Your client does not have permission to get URL")
+	{
+		; Can't be found. Try 2: using Google
+		;~ GoSub DisplayCommands
+		URLDownloadToFile, % "http://www.google.com/search?btnI=1&q=AutoHotKey+" Name , temp
+		FileRead, webPage, temp
+		FileDelete, Temp
+		
+		;~ siteCheck := InStr(webPage, "Your client does not have permission")
+		RegexMatch(webPage, "Your client does not have permission to get URL", siteCheck)
+		
+		if (siteCheck = "Your client does not have permission to get URL")
+		{
+			GoSub DisplayCommands
+			return
+		}
+		else 
+		{
+			docParameters := webPage
+			GoSub ReplaceWithRegEx
+		}
+	}
+	else
+		GoSub ReplaceWithRegEx
+return
+
+ReplaceWithRegEx:
+	{
+		; Assuming www.autohotkey.com keeps the same format...
+		; finds parameters by searching for everything in between the table
+		RegExMatch(webPage, "\Q<body>\E.*?\Q</body>\E", docParameters)
+		
+		; replaces the parameters
+		docParameters := RegExReplace(docParameters, "<pre", "`n`n¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤`n<pre")
+		docParameters := RegExReplace(docParameters, "</pre>", "</pre>`n¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤")
+		
+		; searchs for all headers tagged with <h*></h*>
+		docParameters := RegExReplace(docParameters, "<h1", "`n`n##########################`n####  <h")
+		docParameters := RegExReplace(docParameters, "</h1>", "</h>`n##########################")
+		docParameters := RegExReplace(docParameters, "<h[2-9]", "`n`n==========================`n=  <h")
+		docParameters := RegExReplace(docParameters, "</h[2-9]>", "</h>`n==========================")
+		
+		; searchs for all paragraph markers and double spaces them
+		docParameters := RegExReplace(docParameters, "<p>", "`n`n")
+		
+		;~ ; searchs for lists
+		docParameters := RegExReplace(docParameters, "\Q<li>\E", "—")
+		
+		; Takes away the spacing from the parameter and their description
+		docParameters := RegExReplace(docParameters, "\Q</dt>\E.*?\Q<dd>\E", "— ")
+		
+		; replaces <dt> with a hyphen
+		docParameters := RegExReplace(docParameters, "\Q<dt>\E", "—")
+		
+		; misc characters that needs to be replaced
+		docParameters := regexReplace(docParameters, "&nbsp", " ") ; non-breaking space
+		docParameters := regexReplace(docParameters, "&quot;", """") ; quotes
+		docParameters := regexReplace(docParameters, "&lt;", "<") ; less than
+		docParameters := regexReplace(docParameters, "&gt;", ">") ; greater than
+		docParameters := regexReplace(docParameters, "&amp;", "&") ; ambersand 
+		
+		; cleans up all the html tags <>
+		docParameters := regexReplace(docParameters, "<.*?>", "$1") 
+		
+		; removes all 3+ linebreaks
+		docParameters := regexReplace(docParameters, "\s{3,}", "`n`n")
+		docParameters := regexReplace(docParameters, "`a{3,}", "`n`n")
+		
+		
+		if !docParameters
+			return
+		else  webText := SubStr(docParameters,3)
+	}
+	
+displayCommands:
+	GuiControl, SciTe:Text, displayCommands, %  webText
+return
+
+#If
+
+MoveGui:
+{
+	If WinExist("ahk_class SciTEWindow ahk_exe SciTE.exe")
+	{
+	   WinGetPos, x, y, w, h, ahk_class SciTEWindow ahk_exe SciTE.exe
+	   WinGet, hwndINFO, ID, ahk_class SciTEWindow ahk_exe SciTE.exe
+	 
+		if (x+w+GuiWidth)>A_ScreenWidth
+			GuiXposition := x - GuiWidth
+		else GuiXposition := x + w
+			
+	   GuiYposition := y
+	   
+	   ; if SciTe is active... or if the gui-script is active...
+		If WinActive("ahk_class SciTEWindow ahk_exe SciTE.exe") or WinActive("ahk_class AutoHotkeyGUI ahk_exe AutoHotkey.exe")
+			{
+				Gui, SciTe:Show, NoActivate x%GuiXPosition% y%GuiYPosition%
+				;~ ToolTIp % "Show " WinActive("ahk_exe SciTe.exe")
+			}
+			else 
+			{
+				If WinExist("ahk_class SciTEWindow ahk_exe SciTE.exe")
+				{
+					Gui, SciTe:Show, Hide
+					;~ ToolTIp % "Hide " WinActive("ahk_exe SciTe.exe")
+				}
+				else ExitApp
+			}
+	}
+	else
+	{
+		Exit()
+	}
+	
+return
+}
+
+Exit()
+{
+	ExitApp
+}
