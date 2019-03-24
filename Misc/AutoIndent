@@ -1,0 +1,237 @@
+/*
+  Copy someone's code onto your clipboard. 
+  Press F1 to auto-indent + paste the code. 
+  
+  This works by counting parenthesis, (), brackets {}, and blocks []. 
+  if your script casually uses them, say for a regex expression like: 
+  
+  regExMatch(str, "O)(?P<code>).*?")
+  
+  then it'll throw off a portion of the indentations. But it should work
+  for most basic scripts. 
+
+*/
+
+#NoEnv
+#SingleInstance, Force
+;~ SetControlDelay, -1
+SendMode Input
+SetWorkingDir, %A_ScriptDir%
+OnExit("exit")
+
+F1::prettify()
+return 
+
+prettify()
+{
+	code := ""
+	oldTabCount := 0
+	TabCount := 0
+	string := TRIM(clipboard)
+	string := TRIM(StrReplace(string, ";", "`n;"))
+	string := TRIM(StrReplace(string, "`r`n", "`n"))
+	addCount := []
+	subCount := []
+	loopCount := []
+	resetCount := []
+
+	addCount := ["(", "{", "["] 
+	loopCount := ["while", "for", "until"
+				, "If", "IfEqual", "IfNotEqual", "IfLess"
+				, "IfLessOrEqual", "IfGreater", "IfGreaterOrEqual"
+				, "IfWinActive", "IfWinNotActive", "IfWinExist"
+				, "IfWinNotExist", "IfTimeout", "ifinstring"
+				, "ifNotInString", "ifExist", "IfNotExist", "ifMsgBox"]
+	subCount := [")", "}", "]" , "return"]
+	resetCount := ["class", "global", "static", "#"]
+	
+
+	; stores all comments in a new line: 
+	Loop, parse, string, `n
+	{
+		str := Trim(A_LoopField)
+		if (str ~= "^\/\*")
+		{
+			InComment := 1
+		}
+
+
+		if (InComment = 1)
+		{
+			if (str ~= "^\*\/")
+				InComment := 0
+			;~ Send {tab}
+			;~ Send {raw}%str% 
+			;~ Send {enter}
+			code .= A_Tab . str . "`r`n"
+
+		}
+
+		else if !(InComment)
+		{
+			if (tabCount < 0)
+					tabCount := 0
+		
+				if (SubStr(str, 1, 1) = ".") 
+				|| (SubStr(str, 1, 1) = ",") 
+				|| (SubStr(str, 1, 4) = "and ") 
+				|| (SubStr(str, 1, 3) = "&& ")
+				|| (SubStr(str, 1, 3) = "or ")
+				|| (SubStr(str, 1, 3) = "|| ")
+				{
+					tabCount := oldTabCount
+					period := 1
+				}
+				else
+				{
+						period := 0
+						; looks for characters in the addCount array
+						for k, v in addCount 
+						{
+							While (pos := InStr(str, v, false, A_Index))
+							{
+								if (A_Index = pos)
+									tabCount++
+							}
+							
+								While (count := RegexMatch(str, """.*?\" v ".*?""", out, A_Index))
+								{
+									if (A_Index = count)
+									{
+										tabCount--
+									}
+								}
+						}
+				
+						; looks for characters in the subCount array
+						for k, v in subCount 
+						{
+							While (pos := InStr(str, v, false, A_Index))
+								{
+									if (A_Index = pos)
+										tabCount--
+								}
+
+							While (count := RegexMatch(str, """.*?\" v ".*?""", out, A_Index))
+								{
+									if (A_Index = count)
+									{
+										tabCount++
+									}
+								}
+						}
+				
+						; looks for characters that we need to reset 
+						for k, v in resetCount
+						{
+							if InStr(str, v) 
+							{
+								TabCount := 0
+								TempCount := 0
+								nextTab := 0
+								oldTabCount := 0
+								break
+							}
+						}
+						
+						; if it has a double colon: (hotkey)
+						if (str ~= ".*?::.*?")
+						{
+							TabCount := 0
+							TabCount++
+							TempCount := 0
+							nextTab := 0
+							oldTabCount := 0
+						}
+		
+						; if it ends in an colon and isn't a double colon: 
+						; aka a label
+						if (str ~= "[^:]:$")
+						{
+							tabCount++
+						}
+		
+						; if we last found an "if" without a bracket, and it's bracket is here...
+						; we don't want to add an extra space 
+						if (tempTab = 1) && (str = "{")
+							NextTab := 0
+				
+						; looks for if/whiles/for 
+						for k, v in loopCount
+						{
+							if (str ~= "^(?i)" v "\W")  && (tabCount = oldTabCount)
+							{
+								tempTab := 1
+								break
+							}
+							else 
+								tempTab := 0
+						}
+				}
+				
+				If (tabCount <= oldTabCount)
+				{
+				   ;~ send % "{tab " tabcount + nextTab + period "}"
+				   ;~ Send {raw}%str%
+				   ;~ send {enter}
+				   
+				   loop % tabcount + nextTab + period
+						code .= A_Tab 
+					code .= str . "`r`n"
+				}
+		
+				else if (tabCount > oldTabCount)
+				{
+				   ;~ send % "{tab " oldTabCount + nextTab + period "}"
+				   ;~ Send {raw}%str%
+				   ;~ send {enter}
+
+				   loop % oldTabCount + nextTab + period
+				   		code .= A_Tab 
+				   	code .= str . "`r`n"
+				}
+		
+				oldTabCount := tabCount
+		
+				nextTab := tempTab
+		}
+	}
+
+SendClip(code)
+return
+}
+
+
+; ---------- Functions --------
+Exit()
+{
+	ExitApp
+}
+SendClip(str)
+{
+	Sleep, 50
+	; Backup the current clipboard
+	clipBak		:= ClipboardAll
+	; Blank out the current clipboard
+	Clipboard	:= ""
+	; Assign string to clipboard
+	Clipboard	:= str
+	; Wait for text to be there
+	ClipWait
+	; Small pause
+	Sleep, 50
+	; Send paste
+	SendInput, {Ctrl Down}v{Ctrl Up}
+	; Another small pause
+	Sleep, 50
+	; Restore clipboard from backup
+	Clipboard	:= clipBak
+	; Release backup data
+	clipBak		:= ""
+return
+}
+; ---------- --------- --------
+
+; -------- Pre-HotKeys --------
+F8::Reload
+^`::Exit()
