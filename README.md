@@ -52,11 +52,60 @@ Both are located in the `IDE` folder, and requires the function `SendClip()` and
 
     MsgBox % "Array: newArr`n"
 	    .	"`n " strnewArr
+-----------------
 
-### The documentation for iniRead() should be in the code itself. 
+### IniRead() 
+Another ini_read to object creater. 
+ 
+Example use: iniRead("config.ini")
+
+ To get a list of sections into an array "SectionList", do this:
+ 
+    sectionList := iniRead("config.ini")
+ 
+    string := ""
+    for index, Section in SectionList
+        string .= Index ": " Section
+ 
+    MsgBox % string
+ 
+This iniRead() works with .ini/.txt files in the format of:
+ 
+     [section]
+     key=value
+     key = value
+ 
+ If the very first line isn't a section, it'll fail out. I debated about throwing the name "default" for the very first 
+ section, but decided not to. 
+ 
+ Once you call the function, you can then refer to each variable as `section.key` to get the `value`. 
+ 
+ IMPORTANT: only call the function once per file! It generates (what I think) a super global associative array that may/maynot conflict with other future generations of the same file. 
+ 
+ If my .ini file has: 
+
+     [Fish]
+      Red=3
+      White = 5
+      orange =18
+ 
+     [flowers]
+      pink = 5
+      green= 4
+ 
+ And I want to find the value under the section "Flowers" under the category of greens, I would do `flowers.green` 
+ 
+    MsgBox % flowers.green
+ 
+ and that will display `4`. If I want to look for "`Fish`", with Key of "`White`"
+ I would do "`fish.white`" to get the value of `5`.
+  
+-------------------
 
 ### SciTe-Companion
 It does a URL-download-to-file each time the user types in a command (while using SciTe4AutoHotKey). It then makes 2 attempts at max to pull up the corresponding webpage, takes out the html codes, and display a text-base version of the ahk-documentation pages. 
+
+---------
 
 ### AHK Image + Variation 
 Open the script, a GUI interface should pop up. Select the image file you want to search, make sure the image is on screen, and press search. The GUI will minimize, and attempts to find the picture, showing user the variations it's going through. Once found, the accompanying code is copied to clipboard. 
@@ -69,6 +118,8 @@ An attempt to make a GUI-interface to do a pixel-search.
 * step 3: Select your options (move mouse/click/show). 
 * Step 4: Choose your frequency. Once per second, once per millisecond (aka as soon as possible), etc 
 * step 5: press start. 
+
+---------------------
 
 ### AutoIndent
 An attempt to help codify/prettify a script. Select someone's script, copy it to clipboard, and press F1 when you're ready to paste the copied code. 
