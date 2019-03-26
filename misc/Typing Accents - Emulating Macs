@@ -1,36 +1,60 @@
+
 /*
-  This is an attempt to emulate mac's way of typing in accented characters. 
- Press alt + {`|e|i|t|u} to prime the keyboard for your accent:
-  ` = grave  
-  e = acute 
-  i = cir  
-  t = tilde  
-  u = umlaut
+	This is an attempt to emulate mac's way of typing in accented characters. 
+	1) Press alt + {`|e|i|t|u} to prime the keyboard for your accent:
+		` = grave  
+		e = acute 
+		i = cir  
+		t = tilde  
+		u = umlaut
 
-I.e. Press (Alt+I), then (A)
+	I.e. Press (Alt+I), then (A)
 
-    Additionally, other symbols can be typed using the {Alt} + {letter/number} combination. 
-    
-    For example: {Alt} + {7} = ¶
-       {shift} + {Alt} + {7} = ‡
-       
+	2) Hold down either the a, e, i, o, u, n, or y key for options. Please go easy on it. There may be some quirks with this feature. 
+
+	3) Or just use ALT and press a keyboard key.
+	
+	; To be added: 
+	;~ Menu, Tray, Add, Show Keyboard for Alt Keys, AltKeys
 */
 
-; set a timeout period of 1 second
-TimeOut := 1
-
+#NoEnv
 #SingleInstance, force 
 #InstallKeybdHook
+;~ #MaxHotkeysPerInterval, 1
 SendMode Input
 SetWorkingDir, %A_ScriptDir%
 OnExit("exit")
+
+Menu, Tray, Icon, shell32.dll, 174
+
+/* **************************************************************************
+		Variables
+***************************************************************************
+; list your timeout period, in seconds. 
+timeOutWaitingForKey := 2	; remember, this number is in seconds.
+
+; When holding a key down, list the amount of second you want to hold the key down for before showing the accents:
+timeHoldDown := .8
+
+; when the tooltip pops up, how long do you want it to last? 
+tipTimeOut := 3
+
+****************************************************************************************
+*/
 
 /*
 	set up our arrays for accent characters: 
 	a, e, i, o, u, n, y
 */
 
-a := ["{asc 0224}" 	; à
+; ************************
+
+; creates gui:
+Gui, Acc:Add, Text, vShowCharacters, Text
+Gui, Acc:+AlwaysOnTop -Caption
+
+a := ["{asc 0224}"  ; à
 	, "{asc 0192}"  ; À
 	, "{asc 0225}"  ; á
 	, "{asc 0193}"  ; Á
@@ -63,7 +87,7 @@ i := ["{asc 0236}"	; ì
 	, "{asc 0239}"	; ï
 	, "{asc 0207}"]	; Ï
 
-o := ["{asc 149}"	; ò
+o := ["{asc 0242}"	; ò
 	, "{asc 0210}"	; Ò
 	, "{asc 0243}"	; ó
 	, "{asc 0211}"	; Ó
@@ -74,11 +98,11 @@ o := ["{asc 149}"	; ò
 	, "{asc 0246}"	; ö
 	, "{asc 0214}"]	; Ö
 
-u := ["{asc 151}"	; ù
+u := ["{asc 0249}"	; ù
 	, "{asc 0217}"	; Ù
 	, "{asc 0250}"	; ú
 	, "{asc 0218}"	; Ú
-	, "{asc 150}"	; û
+	, "{asc 0251}"	; û
 	, "{asc 0219}"	; Û
 	, "{asc 0117}"	; u
 	, "{asc 0085}"	; U
@@ -106,61 +130,60 @@ y := ["{asc 0121}"	; y
 	, "{asc 0089}"	; Y
 	, "{asc 0255}"	; ÿ
 	, "{asc 0159}"]	; Ÿ
-
 /*
 	Set up array for the numbers + keyboard
 */
 
-Alt := {}
-; keys := no shift , shift 
-Alt.1 := ["{asc 0161}", "{asc 0047}"]	;	¡, /
-Alt.2 := ["{asc 0128}", "{asc 0153}"]	;	€, ™
-Alt.3 := ["{asc 0163}", "{asc 0139}"]	;	£, ‹
-Alt.4 := ["{asc 0162}", "{asc 0155}"]	;	¢, ›
-Alt.5 := ["{asc 236}","{U+FB01}"]	;	∞, ﬁ
-Alt.6 := ["{asc 0167}","{U+FB02}"]	;	§, ﬂ
-Alt.7 := ["{asc 0182}", "{asc 0135}"]	;	¶, ‡
-Alt.8 := ["{asc 0149}", "{asc 248}"]	;	•, °
-Alt.9 := ["{asc 166}", "{asc 0183}"]	;	ª, ·
-Alt.0 := ["{asc 0186}", "{asc 0130}"]	;	º, ‚
+	Alt := {}
+	; keys := no shift , shift 
+	Alt.1 := ["{asc 0161}", "{asc 0047}"] ;	¡, /
+	Alt.2 := ["{asc 0128}", "{asc 0153}"] ;	€, ™
+	Alt.3 := ["{asc 0163}", "{asc 0139}"] ;	£, ‹
+	Alt.4 := ["{asc 0162}", "{asc 0155}"] ;	¢, ›
+	Alt.5 := ["{asc 236}","{U+FB01}"]     ;	∞, ﬁ
+	Alt.6 := ["{asc 0167}","{U+FB02}"]    ;	§, ﬂ
+	Alt.7 := ["{asc 0182}", "{asc 0135}"] ;	¶, ‡
+	Alt.8 := ["{asc 0149}", "{asc 248}"]  ;	•, °
+	Alt.9 := ["{asc 166}", "{asc 0183}"]  ;	ª, ·
+	Alt.0 := ["{asc 0186}", "{asc 0130}"] ;	º, ‚
 
-Alt.a := ["{asc 0229}", "{asc 0197}"]	;	å, Å
-Alt.b := ["{U+222b}", "{U+0131}"]	;	∫, ı
-Alt.c := ["{asc 0231}", "{asc 128}"]	;	ç, Ç
-Alt.d := ["{U+2202}", "{asc 0206}"]	;	ç, Ç
-Alt.e := ["{asc 0180}", "{asc 0137}"]	;	´, ‰
-Alt.f := ["{asc 0131}", "{asc 0207}"]	;	ƒ, Ï
-Alt.g := ["{asc 0169}", "{asc 0204}"]	;	©, Ì
-Alt.h := ["{U+02d9}", "{asc 0211}"]	;	˙, Ó
-Alt.i := ["{asc 94}", "{asc 0200}"]	;	^, È
-Alt.j := ["{asc 235}", "{asc 0212}"]	;	δ, Ô
-Alt.k := ["{asc 0176}", "{U+F8FF}"]	;	°,   ; U+F8FF Apple, only on certain fonts	
-Alt.l := ["{asc 170}", "{asc 0210}"]	;	¬, Ò
-Alt.m := ["{asc 0181}", "{asc 0152}"]	;	µ, ˜
-Alt.n := ["{asc 126}", "{asc 94}"]	;	~, ^
-Alt.o := ["{asc 0248}", "{asc 0216}"]	;	~, ^
-Alt.p := ["{asc 227}", "{U+213f}"]	;	π, ℿ
-Alt.q := ["{asc 0156}", "{asc 0140}"]	;	œ, Œ
-Alt.r := ["{asc 0174}", "{asc 0194}"]	;	®, Â
-Alt.s := ["{asc 0223}", "{asc 0205}"]	;	ß, Í
-Alt.t := ["{asc 0134}", "{asc 0202}"]	;	†, Ê
-Alt.u := ["{asc 0168}", "{asc 0203}"]	;	¨, Ë
-Alt.v := ["{asc 118}", "{U+25ca}"]	;	v, ◊
-Alt.w := ["{asc 238}", "{asc 0132}"]	;	ε, „
-Alt.x := ["{asc 247}", "{asc 0217}"]	;	≈, Ù
-Alt.y := ["{asc 157}", "{asc 0193}"]	;	¥, Á
-Alt.z := ["{asc 234}", "{asc 0219}"]	;	Ω, Û
+	Alt.a := ["{asc 0229}", "{asc 0197}"]	 ;	å, Å
+	Alt.b := ["{U+222b}", "{U+0131}"] 	 ;	∫, ı
+	Alt.c := ["{asc 0231}", "{asc 128}"]	 ;	ç, Ç
+	Alt.d := ["{U+2202}", "{asc 0206}"]	 ;	∂, Î
+	Alt.e := ["{asc 0180}", "{asc 0137}"]	 ;	´, ‰
+	Alt.f := ["{asc 0131}", "{asc 0207}"]	 ;	ƒ, Ï
+	Alt.g := ["{asc 0169}", "{asc 0204}"]  	 ;	©, Ì
+	Alt.h := ["{U+02d9}", "{asc 0211}"]  	 ;	˙, Ó
+	Alt.i := ["{asc 94}", "{asc 0200}"]  	 ;	^, È
+	Alt.j := ["{asc 235}", "{asc 0212}"] 	 ;	δ, Ô
+	Alt.k := ["{asc 0176}", "{U+F8FF}"]	 ;	°,  ; U+F8FF Apple, only on certain fonts 
+	Alt.l := ["{asc 170}", "{asc 0210}"]	 ;	¬, Ò
+	Alt.m := ["{asc 0181}", "{asc 0152}"]	 ;	µ, ˜
+	Alt.n := ["{asc 126}", "{asc 94}"]	 ;	~, ^
+	Alt.o := ["{asc 0248}", "{asc 0216}"]	 ;	ø, Ø
+	Alt.p := ["{asc 227}", "{U+213f}"]	 ;	π, ℿ
+	Alt.q := ["{asc 0156}", "{asc 0140}"]	 ;	œ, Œ
+	Alt.r := ["{asc 0174}", "{asc 0194}"]	 ;	®, Â
+	Alt.s := ["{asc 0223}", "{asc 0205}"]	 ;	ß, Í
+	Alt.t := ["{asc 0134}", "{asc 0202}"]	 ;	†, Ê
+	Alt.u := ["{asc 0168}", "{asc 0203}"]	 ;	¨, Ë
+	Alt.v := ["{asc 118}", "{U+25ca}"] 	 ;	v, ◊
+	Alt.w := ["{asc 238}", "{asc 0132}"]	 ;	ε, „
+	Alt.x := ["{asc 247}", "{asc 0217}"]	 ;	≈, Ù
+	Alt.y := ["{asc 157}", "{asc 0193}"]	 ;	¥, Á
+	Alt.z := ["{asc 234}", "{asc 0219}"]	 ;	Ω, Û
 
-Alt.Minus := ["{asc 0150}", "{asc 0151}"]	;	–, —
-Alt.Equal := ["{U+2260}", "{asc 0177}"]		;	≠, ±
-Alt.OBracket := ["{asc 0147}", "{asc 0148}"]	;	“, ”
-Alt.CBracket := ["{asc 0145}", "{asc 0146}"]	;	‘, ’
-Alt.SemiColon := ["{asc 0133}", "{asc 0218}"]	;	‘, ’
-Alt.Tick := ["{asc 145}", "{asc 146}"]		;	æ, Æ
-Alt.BackSlash := ["{asc 0171}", "{asc 175}"]	;	«, »
-Alt.Comma := ["{asc 243}", "{asc 0175}"]	;	≤, ¯
-Alt.Period := ["{asc 242}", "{U+02d8}"]		;	≥, ˘
-Alt.Slash := ["{asc 246}", "{asc 168}"]		;	÷, ¿
+	Alt.Minus := ["{asc 0150}", "{asc 0151}"]	 ;	–, —
+	Alt.Equal := ["{U+2260}", "{asc 0177}"]		 ;	≠, ±
+	Alt.OBracket := ["{asc 0147}", "{asc 0148}"]	 ;	“, ”
+	Alt.CBracket := ["{asc 0145}", "{asc 0146}"]	 ;	‘, ’
+	Alt.SemiColon := ["{asc 0133}", "{asc 0218}"]	 ;	…, Ú
+	Alt.Tick := ["{asc 145}", "{asc 146}"]		 ;	æ, Æ
+	Alt.BackSlash := ["{asc 0171}", "{asc 175}"]	 ;	«, »
+	Alt.Comma := ["{asc 243}", "{asc 0175}"] 	 ;	≤, ¯
+	Alt.Period := ["{asc 242}", "{U+02d8}"]		 ;	≥, ˘
+	Alt.Slash := ["{asc 246}", "{asc 168}"]		 ;	÷, ¿
 
 ; make an array for all the keys we're going to use for hotkey
 keyboard := ["a", "b", "c", "d" 
@@ -174,110 +197,250 @@ keyboard := ["a", "b", "c", "d"
 			, "-", "=", "`[", "`]",  "`.", "`/"
 			, "`;", "`\", "`,"]
 
-; commented out keys: 
-; e, i, t, u, `
-; they're used for the accented characters. 
+	; commented out keys: 
+	; e, i, t, u, `
+	; they're used for the accented characters. 
 
 ; -------------------------------------------
 ;				 grave  acute cir  t~  umlaut
 AccentLetters := ["``", "e", "i", "t", "u"]
+AccentCharact := {"``":"{Raw}``", "e":"{asc 0180}", "i":"{asc 94}", "t":"{asc 126}", "u":"{U+0308}"}
 
-; create hotkeys for these keys on the keyboard.
-for index, key in keyboard
-	Hotkey, % "*!" key, NonAccentCharacters, On
+lettersWithAccent := ["a", "e", "i", "o", "u", "n", "y"]
 
-; create hotkeys for the accents on the keyboard.
-for index, key in AccentLetters
-	HotKey, % "*!" key, AccentCharacters
+	; create hotkeys for these Alt+keys on the keyboard.
+	for index, key in keyboard
+		Hotkey, % "*!" key, NonAccentCharacters, On
 
-; -------------------------------------------
-; accents over letters:
-AccentCharacters:
-KeyPressed := A_ThisHotKey
+	; create hotkeys for the Alt+accents on the keyboard.
+	for index, key in AccentLetters
+		HotKey, % "*!" key, AccentCharacters
 
-; check if "Shift" is pressed. Need this info for when it times out. 
-if (GetKeyState("Shift"))
-	shiftState := 1
-Else
-	shiftState := 0
+	; create hotkeys for holding down the letters 
+Hotkey, If, !(AccentCharacters) && !(ShowAccents)
+	for index, key in lettersWithAccent
+		HotKey, % "*$" key, ShowTips
 
-; sets up an inputbox to catch the character. 
-; L1 = limit to one character, t2 = Timeout of 2 seconds, c = case sensitive. 
-Input, char, L1 T%TimeOut% C M
+; pick our accents, 1 - 5. 
+Hotkey, If, (!AccentCharacters) && (ShowAccents)
+	loop, 5
+	{
+		HotKey, % A_Index, ChooseAccents
+	}
 
-; if it times out, then send the original keys 
-If (ErrorLevel = "TimeOut")
-{
-	KeyPressed := StrReplace(A_ThisHotkey, "*!")
-	Send % alt[KeyPressed][1+ShiftState]
-}
+; closes out of tooltip on keypress of any character 
+HotKey, if, (!AccentCharacters) && (ShowAccents)
+	loop, 26
+		HotKey, % "*$" chr(A_Index + 96), sendkeys
 
-; checks to make sure we're pressing only the "a, e, i, o, u, n, & y" keys
-else if (char = "a") || (char = "e") || (char = "i") || (char = "o") || (char = "u") || (char = "n") || (char = "y")
-{
-	; check if "Shift" is pressed again, just in case. 
+	; closes out of tooltip on keypress of any 6-0 number. 
+	loop,5
+		Hotkey % "*$" subStr(A_Index, 0, 1), sendKeys 
+HotKey, If
+return 
+; ------ End of AutoExecute Section ---------
+#If !(AccentCharacters) && !(ShowAccents)
+ShowTips:
+
+	KeyPressed := StrReplace(A_ThisHotkey, "*$")
+
 	if (GetKeyState("Shift"))
 		shiftState := 1
 	Else
 		shiftState := 0
-	; determines which column to use
-	if InStr(KeyPressed, "!``")
-		column := 1 + shiftState
-	else if InStr(KeyPressed, "!e")
-		column := 3 + shiftState
-	else if InStr(KeyPressed, "!i")
-		column := 5 + shiftState
-	else if InStr(KeyPressed, "!t")
-		column := 7 + shiftState
-	else if InStr(KeyPressed, "!u")
-		column := 9 + shiftState
 
-	send % %char%[column]
-}
+	Send, % "{Blind}" keypressed
 
-; if we're not pressing any of those keys, go ahead and send our keypress.
-Else
-	Send % char
+	KeyWait, %keypressed%, T%timeHoldDown%
+	if (errorlevel)
+	{
+		; highlights our word 
+		Send {left}+{right}
+
+		; builds our tooltip 
+		str := ""
+		Loop, 5
+		{
+			if (str)
+				str .= A_Tab
+
+			; grabs the character code 
+			chrCode := SubStr(%keypressed%[(2 * (A_Index -1)) + 1 + ShiftState], 5, -1)
+			
+			str .= A_Index ": " chr(chrCode)
+		}
+
+		; Shows ToolTip
+		ToolTip, %str%, % A_CaretX - 20, % A_CaretY - 20
+
+		; waits for key to be released (to prevent auto-firing)
+		KeyWait, %keyPressed%
+		ShowAccents := 1
+		SetTimer, TurnOffAllContexts, % "-" TipTimeOut * 1000
+	}
+	else 
+	{
+		; waits for key to be released (to prevent auto-firing)
+		KeyWait, %Keypressed%
+		ShowAccents := 0
+	}
+
+return 
+#If
+
+#If (!AccentCharacters) && (ShowAccents)
+
+ChooseAccents:
+; when the tooltip is open, and you select 1-5
+	char := StrReplace(A_ThisHotkEy, "*$")
+	Send % "{blind}" %keypressed%[(2 * (char-1)) + 1 + shiftstate]
+
+	; resets 
+	GoSub TurnOffAllContexts
+
+return
+
+sendKeys:
+; when the tooltip is open, if we press on any other keys and not 1-5
+	keyPressed := StrReplace(A_ThisHotkey, "*$")
+	Send % "{blind}{right}{" keyPressed "}"
+	
+	; resets 
+	GoSub TurnOffAllContexts
+
+return 
+
+#If 
+
+TurnOffAllContexts:
+
+	;resets
+	ToolTip
+	ShowAccents := 0
+	AccentCharacters := 0
+	SetTimer, TurnOffAllContexts, Off
+	
+return
+
+; accents over letters:
+AccentCharacters:
+	KeyPressed := A_ThisHotKey
+
+	; check if "Shift" is pressed. Need this info for when it times out. 
+	if (GetKeyState("Shift"))
+		shiftState := 1
+	Else
+		shiftState := 0
+
+; we are now typing accents. 
+	AccentCharacters := 1
+	; show the accent prior to typing the key. 
+	; grabs the last letter of the hotkey 
+	send % accentCharact[StrReplace(keypressed, "*!")]
+
+	if (timeOutWaitingForKey != 0)
+		send {left}+{right}
+
+	; sets up an inputbox to catch the character. 
+	; L1 = limit to one character, t2 = Timeout of 2 seconds, c = case sensitive. 
+	Input, char, L1 T%timeOutWaitingForKey% C, {backspace}{right}{left}{up}{down}
+
+	; if it times out, then send the original keys 
+	If (ErrorLevel = "TimeOut")
+	{
+		KeyPressed := StrReplace(A_ThisHotkey, "*!")
+		Send % alt[KeyPressed][1+ShiftState]
+		AccentCharacters := 0
+	}
+
+	; if we press on any of our escape keys: press it. 
+	else if (ErrorLevel = "EndKey:Left")
+		 || (ErrorLevel = "EndKey:Right")
+		 || (ErrorLevel = "EndKey:Up")
+		 || (ErrorLevel = "EndKey:Down")
+		 || (ErrorLevel = "EndKey:Backspace")
+		 {
+		 	char := ErrorLevel
+		 	Send % "{" StrReplace(char, "EndKey:") "}"
+		 	AccentCharacters := 0
+		 }
+
+	; checks to make sure we're pressing only the "a, e, i, o, u, n, & y" keys
+	else if (char = "a") || (char = "e") || (char = "i") || (char = "o") || (char = "u") || (char = "n") || (char = "y")
+	{
+		; check if "Shift" is pressed again, just in case. 
+		if (GetKeyState("Shift"))
+			shiftState := 1
+		Else
+			shiftState := 0
+
+		; determines which column to use
+		if InStr(KeyPressed, "!``")
+			column := 1 + shiftState
+		else if InStr(KeyPressed, "!e")
+			column := 3 + shiftState
+		else if InStr(KeyPressed, "!i")
+			column := 5 + shiftState
+		else if InStr(KeyPressed, "!t")
+			column := 7 + shiftState
+		else if InStr(KeyPressed, "!u")
+			column := 9 + shiftState
+
+		send % %char%[column]
+		AccentCharacters := 0
+	}
+
+	; if we're not pressing any of those keys, go ahead and send our keypress.
+	Else
+	{
+		Send % char
+		AccentCharacters := 0
+	}
 Return
 
 ; non-accent characters. 
 NonAccentCharacters:
-KeyPressed := StrReplace(A_ThisHotkey, "*!")
-	; check if "Shift" is pressed
-	if (GetKeyState("Shift"))
-		shiftState := 1
-	Else
-		shiftState := 0
+	KeyPressed := StrReplace(A_ThisHotkey, "*!")
+		; check if "Shift" is pressed
+		if (GetKeyState("Shift"))
+			shiftState := 1
+		Else
+			shiftState := 0
 
-; replace symbols with letters so we can use it in the array 
-if (KeyPressed = "=")
-	keypressed := "Equal"
-else if (KeyPressed = "[")
-	keyPressed := "OBracket"
-else if (KeyPressed = "]")
-	keyPressed := "CBracket"
-else if (KeyPressed = ";")
-	keyPressed := "SemiColon"
-else if (KeyPressed = "``")
-	keyPressed := "Tick"
-else if (KeyPressed = "\")
-	keyPressed := "BackSlash"
-else if (KeyPressed = ",")
-	keyPressed := "Comma"
-else if (KeyPressed = ".")
-	keyPressed := "Period"
-else if (KeyPressed = "/")
-	keyPressed := "Slash"
+	; replace symbols with letters so we can use it in the array 
+	if (KeyPressed = "=")
+		keypressed := "Equal"
+	else if (KeyPressed = "[")
+		keyPressed := "OBracket"
+	else if (KeyPressed = "]")
+		keyPressed := "CBracket"
+	else if (KeyPressed = ";")
+		keyPressed := "SemiColon"
+	else if (KeyPressed = "``")
+		keyPressed := "Tick"
+	else if (KeyPressed = "\")
+		keyPressed := "BackSlash"
+	else if (KeyPressed = ",")
+		keyPressed := "Comma"
+	else if (KeyPressed = ".")
+		keyPressed := "Period"
+	else if (KeyPressed = "/")
+		keyPressed := "Slash"
 
-Send % alt[KeyPressed][1+ShiftState]
+	Send % alt[KeyPressed][1+ShiftState]
 Return
 
-; ---------- Functions --------
+
+AltKeys:
+
+return
+
+F8::Reload
+
+^`::Exit()
+
 Exit()
 {
 	ExitApp
 }
 ; ---------- --------- --------
-
-F8::Reload
-^`::Exit()
