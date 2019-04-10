@@ -33,6 +33,14 @@ prettify()
 	
 	string := TRIM(StrReplace(string, "`r`n", "`n"))
 	
+
+	newString := ""
+
+	;~ addCount := []
+	;~ subCount := []
+	;~ loopCount := []
+	;~ resetCount := []
+
 	addCount := ["(", "{", "["] 
 	loopCount := ["while", "for", "until"
 				, "If", "IfEqual", "IfNotEqual", "IfLess"
@@ -60,14 +68,14 @@ prettify()
 				{
 				   loop % tabcount + nextTab + period
 						code .= A_Tab 
-					code .= commentLine 
+					code .= Trim(commentLine) . "`r`n"
 				}
 		
 				else if (tabCount > oldTabCount)
 				{
 				   loop % oldTabCount + nextTab + period
 				   		code .= A_Tab 
-				   	code .= commentLine
+				   	code .= Trim(commentLine) . "`r`n"
 				}
 		}
 
@@ -157,9 +165,7 @@ prettify()
 								break
 							}
 						}
-						
 
-		
 						; if it ends in an colon and isn't a double colon: 
 						; aka a label
 						if (str ~= "[^:]:$")
@@ -184,6 +190,7 @@ prettify()
 							nextTab := 0
 							oldTabCount := 0
 						}
+
 
 						; looks for if/whiles/for 
 						for k, v in loopCount
