@@ -16,8 +16,8 @@ DetectVars()
     ; replaces all "commas" with a linefeed, in case there's multiple variables per line. 
     str := StrReplace(clipboard, "`,", "`n")
 
-    ; adds a new line before each comment. In case there's a comment after a variable
-    str := StrReplace(str, "`;", "`n`;")
+    ; deletes all ";" comments. 
+    str := RegExReplace(str, "(^\s*|\s+)(;)(.*)$", "")
 
     ; creates array with "str" for each and every line. 
     str := StrSplit(str, "`n") ; comment here
@@ -28,18 +28,50 @@ DetectVars()
     ; array time
     varStr := []
 
+    ; list of regex for arrays: 
+    array_regex := ["O)(?P<ArrayName>^.*?):=.*?Array\(.*?$"   
+            ; Array[Index] := Value
+            , "O)(?P<ArrayName>^.*?)\[.*?:="
+            ; Array := [Item1, Item2, ..., ItemN]
+            , "O)(?P<ArrayName>.*?):=.*?\[.*?,"
+            ; Value := Array[Index]
+            ; ReturnValue := Object[MethodName](Parameters)
+            , "O).*?:=(?P<ArrayName>.*?[^ ])\[.*?$"
+            ; Array.InsertAt(Index, Value, Value2, ...)
+            , "O)(?P<ArrayName>[A-z0-9_\.\-]*?)\.(?i)InsertAt\("
+            ; array.push()
+            , "O)(?P<ArrayName>[A-z0-9_\.\-]*?)\.(?i)Push\("
+            ; array.pop()
+            , "O)(?P<ArrayName>[A-z0-9_\.\-]*?)\.(?i)Pop\(\)"
+            ; Array := Object("KeyA", ValueA, "KeyB", ValueB, ..., "KeyZ", ValueZ)
+            , "O)(?P<ArrayName>^[A-z0-9_\-]*?)\s*:=.*?(?i)Object\("
+            ; newVar := StrSplit(String, [Delimiters, OmitChars])
+            , "O)(?P<ArrayName>.*?):=\s*(?i)StrSplit\("
+            ; RemovedValue := Array.Delete(Key)
+            , "O)(?P<ArrayName>[A-z0-9_\-]*?)\.(?i)Delete\("
+            ; Array := {KeyA: ValueA, KeyB: ValueB, ..., KeyZ: ValueZ}
+            , "O)(?P<ArrayName>[A-z0-9_\-]*?)\s?:=\s*{.*?:"]
+
     ; searches for all ":=" in our "str" array
     For k, v in Str
     {
+        ; check to see if it's dealing with arrays.
+        isArray := 0
+        for index, reg in array_regex
+        {
+            if (v ~= reg)
+            {
+                isArray := 1
+                break
+            }
+        }
     ; could probably do an array for this
-        if InStr(v, ";") = 0        ; we don't need commented lines
-            if InStr(v, "Clipboard") = 0        ; makes sure it's not clipboard-related
-                if InStr(v, "For") = 0              ; makes sure it's not in a "For" loop 
-                    if InStr(v, ":=") != 0          ; makes sure it has a ":=" in there.
-                        if (RegExMatch(v, "\w\(")=0)    ; no letters+parenthesis (arrays)
-                            if InStr(v, "[") = 0                    ; no brackets (no arrays)
-                                if InStr(v, "{") = 0                ; no brackets (no arrays)
-                                    varStr.push(LTRIM(RTRIM(StrSplit(v, ":=")[1])))
+        if (InStr(v, "Clipboard") = 0)        ; makes sure it's not clipboard-related
+        && (InStr(v, "For") = 0)              ; makes sure it's not in a "For" loop 
+        && (InStr(v, ":=") != 0)             ; makes sure it has a ":=" in there.
+        && !(isArray)
+        && !(v ~= "(^\s*|\s+)(;)(.*)$")     ; isn't a comment 
+            varStr.push(TRIM(StrSplit(v, ":=")[1]))
     }
 
     ; Remove Duplicates
@@ -47,7 +79,7 @@ DetectVars()
         
     newStr := "MsgBox % ""Variables:``n""" "`n"
     For k, v in trimmedArray
-        if v != `"      ; makes sure that there's no single "double quote"
+        if (v != "")      ; makes sure that there's no single "double quote"
             newStr .= " . ""- " v " : "" " v " ""``n""" "`n"
 
     ; remove the last character (the last linebreak)
