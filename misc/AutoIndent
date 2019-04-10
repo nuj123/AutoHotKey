@@ -27,14 +27,12 @@ prettify()
 	code := ""
 	oldTabCount := 0
 	TabCount := 0
-	string := TRIM(clipboard)
-	string := TRIM(StrReplace(string, ";", "`n;"))
-	string := TRIM(StrReplace(string, "`r`n", "`n"))
-	addCount := []
-	subCount := []
-	loopCount := []
-	resetCount := []
 
+	AutoTrim, On
+	string := TRIM(clipboard)
+	
+	string := TRIM(StrReplace(string, "`r`n", "`n"))
+	
 	addCount := ["(", "{", "["] 
 	loopCount := ["while", "for", "until"
 				, "If", "IfEqual", "IfNotEqual", "IfLess"
@@ -50,6 +48,30 @@ prettify()
 	Loop, parse, string, `n
 	{
 		str := Trim(A_LoopField)
+
+		; if there's a comment in this line: 
+		if (str ~= "(^\s*|\s+)(;)(.*)$")
+		{
+			RegExMatch(str, "(^\s*|\s+)(;)(.*)$", commentLine)
+			str := RegExReplace(str, "(^\s*|\s+)(;)(.*)$")
+			str := Trim(str)
+
+			If (tabCount <= oldTabCount)
+				{
+				   loop % tabcount + nextTab + period
+						code .= A_Tab 
+					code .= commentLine 
+				}
+		
+				else if (tabCount > oldTabCount)
+				{
+				   loop % oldTabCount + nextTab + period
+				   		code .= A_Tab 
+				   	code .= commentLine
+				}
+		}
+
+
 		if (str ~= "^\/\*")
 		{
 			InComment := 1
@@ -60,9 +82,6 @@ prettify()
 		{
 			if (str ~= "^\*\/")
 				InComment := 0
-			;~ Send {tab}
-			;~ Send {raw}%str% 
-			;~ Send {enter}
 			code .= A_Tab . str . "`r`n"
 
 		}
@@ -86,12 +105,17 @@ prettify()
 				{
 						period := 0
 						; looks for characters in the addCount array
+						
+
+
 						for k, v in addCount 
 						{
 							While (pos := InStr(str, v, false, A_Index))
 							{
-								if (A_Index = pos)
+								if (A_Index = pos) ; && (keyCount = 0)
 									tabCount++
+								if (A_Index = pos) && (keyCount = 1)
+									tabCount--
 							}
 							
 								While (count := RegexMatch(str, """.*?\" v ".*?""", out, A_Index))
@@ -134,15 +158,7 @@ prettify()
 							}
 						}
 						
-						; if it has a double colon: (hotkey)
-						if (str ~= ".*?::.*?")
-						{
-							TabCount := 0
-							TabCount++
-							TempCount := 0
-							nextTab := 0
-							oldTabCount := 0
-						}
+
 		
 						; if it ends in an colon and isn't a double colon: 
 						; aka a label
@@ -150,12 +166,25 @@ prettify()
 						{
 							tabCount++
 						}
-		
+						
+
 						; if we last found an "if" without a bracket, and it's bracket is here...
 						; we don't want to add an extra space 
 						if (tempTab = 1) && (str = "{")
 							NextTab := 0
-				
+
+						keycount := 0
+						; if it has a double colon: (hotkey)
+						if (str ~= ".*?::.*?")
+						{
+							TabCount := 0
+							TabCount++
+							KeyCount := 1
+							TempCount := 0
+							nextTab := 0
+							oldTabCount := 0
+						}
+
 						; looks for if/whiles/for 
 						for k, v in loopCount
 						{
@@ -171,10 +200,6 @@ prettify()
 				
 				If (tabCount <= oldTabCount)
 				{
-				   ;~ send % "{tab " tabcount + nextTab + period "}"
-				   ;~ Send {raw}%str%
-				   ;~ send {enter}
-				   
 				   loop % tabcount + nextTab + period
 						code .= A_Tab 
 					code .= str . "`r`n"
@@ -182,10 +207,6 @@ prettify()
 		
 				else if (tabCount > oldTabCount)
 				{
-				   ;~ send % "{tab " oldTabCount + nextTab + period "}"
-				   ;~ Send {raw}%str%
-				   ;~ send {enter}
-
 				   loop % oldTabCount + nextTab + period
 				   		code .= A_Tab 
 				   	code .= str . "`r`n"
