@@ -1,0 +1,210 @@
+/*
+  https://www.reddit.com/r/AutoHotkey/comments/cut845/to_grep_contents_from_a_csvtext_file_using/
+
+  To grep contents from a CSV/Text File using Autohotkey(AHK) Script
+    
+  Can anyone please help me in writing a script in AHK based on below requirement.
+
+  Requirement:
+  I have a CSV/TXT file in my windows environment which contains 20,000+ records in below format.
+
+  So, when I run the script it should prompt a InputBox to enter an instance name.
+
+  Example :
+  If i enter Instance4 , it should display result in MsgBox as ServerName4
+
+  Sample Format:
+
+    ServerName1,ServerIP,Instance1,Type 
+    ServerName2,ServerIP,Instance2,Type 
+    ServerName3,ServerIP,Instance3,Type 
+    ServerName4,ServerIP,Instance4,Type 
+    ServerName5,ServerIP,Instance5,Type 
+  . 
+  . 
+  .
+  Also as the CSV/TXT file contains large no of records , pls also consider the best way to avoid delay in fetching the results
+*/
+
+; Non-direct answer, using a GUI + Listview: 
+
+#NoEnv
+#SingleInstance, Force
+;~ SetControlDelay, -1
+SendMode Input
+SetWorkingDir, %A_ScriptDir%
+
+file := "test.txt"
+
+; max amount of rows to display, for performance purposes
+maxRows := 100
+
+; one word per value, no space, pls. 
+category := ["Server", "IP", "Instance", "Types"]
+str := ""
+    for k, v in category 
+        str .= v . "|"
+
+readData(file)
+
+; creates a GUI
+w := 300
+
+start := A_TickCount 
+Gui, Add, Text, vNote center +wrap w%w%, Data read from "%file%". Note: Only the first %maxRows% lines are displayed for performance.
+Gui, Add, LIstview, vListOfThings r20 w%w% gClickIt, % str
+    PopulateLV()
+
+GuiAdd()
+Gui, Show, , CSV searcher
+return 
+
+popup(text := "")
+{
+    ToolTip, % text, % A_ScreenWidth // 2, % A_ScreenHeight // 2, 2
+}
+
+readData(file)
+{
+    global 
+
+    ; reads the file into the variable "v"
+    f := fileOpen(file, "r")
+        v := f.read()
+
+    ; closes and frees the memory: 
+    f.close()
+
+    ; stores CSV into a single array. data[row][column]
+        data := {}
+
+        for k, v in StrSplit(v, "`n", "`r")
+             data.insert(strSplit(v, "`,"))
+
+    return 
+}
+
+GuiAdd()
+{
+    Global 
+
+    Gui, Add, Edit, % "section vSearch w" w - 50,
+    Gui, Add, Button, % "gSearch default ys x" w - 35, Search! 
+
+    Gui, Add, Text, xs section, Filter by: 
+    Loop, 4
+    {
+        c_status := (A_Index = 3) ? "checked" : ""
+        Gui, Add, Radio, % "ys v" category[A_Index] " gSearch " c_status, % category[A_Index]
+    }
+
+    Gui, Add, Text, xs 
+
+    Gui, Add, Button, xs section gReload, Reload File
+    Gui, Add, Button, ys gLoad, Load New File
+    Gui, Add, Text, ys right, Max lines `nto load:
+
+    Gui, Add, Edit, ys number  w50,
+    Gui, Add, UpDown, ys vMaxRows Range1-20000 gPopulateLV, % maxRows
+
+    Gui, Add, StatusBar,, % A_TickCount - start " ms needed to populate field."
+}
+
+PopulateLV()
+{
+    global
+    Gui, Submit, NoHide
+
+    SplitPath, file, oFile
+    GuiControl, Text, Note, Data read from "%ofile%". Note: Only the first %maxRows% lines are displayed for performance. 
+
+    LV_Delete()
+
+    for row, x in data
+    {
+        LV_Add("", data[row].1, data[row].2, data[row].3, data[row].4)
+
+        if (lv_GetCount() >= maxRows)
+            break 
+    }
+    
+    LV_ModifyCol()
+
+    Loop, 4
+        LV_ModifyCol(A_Index, "Integer")
+    return 
+}
+
+
+CLickIt:
+    If (A_GuiEvent = "DoubleClick")
+    {
+        LV_GetText(var, A_EventInfo)
+        sleep, 50
+        clipboard := var
+
+        Popup("""" var """ is copied to clipboard!")
+        SetTimer, ClearPopup, -3000
+    }
+return 
+
+
+Search:
+    Gui,Submit, NoHide 
+    if (!search)
+        return 
+
+    ; timer 
+    start := A_TickCount
+
+    LV_Delete()
+
+    for row, x in data
+    {
+        if (InStr(x[Server + (IP*2) + (Instance*3) + (Types*4)], search))
+            LV_Add("", data[row].1, data[row].2, data[row].3, data[row].4)
+        if (LV_GetCount() >= maxRows)
+            break
+    }
+
+    LV_ModifyCol()
+
+    Loop, 4
+        LV_ModifyCol(A_Index, "Integer")
+
+    If (LV_GetCount() = 1)
+    {
+        LV_GetText(var, 1)
+        clipboard := var
+
+        Popup("""" var """ is copied to clipboard!")
+        SetTimer, ClearPopup, -3000
+    }
+
+    SB_SetText("Search time: " A_TickCount - start " ms" )
+return
+
+; don't seperate the "Load" and "RELoad" labels!
+Load: 
+    FileSelectFile, file
+    If !File
+        return 
+
+; don't separate the "Load" and the "ReLoad" labels! 
+    ReLoad:
+        readData(file)
+        PopulateLV()
+return 
+
+GuiClose:
+Exit()
+
+ClearPopup:
+    popup()
+return 
+
+Exit()
+{
+    Gui, Destroy
+    ExitApp
+}
