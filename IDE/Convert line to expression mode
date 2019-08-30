@@ -1,0 +1,149 @@
+/*
+  Hotkey: ^'
+  
+  Copies the line your cursor is on by pressing "{end 3}{home 3}^c" via the "LineToVar()" function,
+  and tries to parse it and change everything after the first comma into expression mode. 
+  
+  If there's no comma after the first word, it'll attempt to throw a comma there. 
+  
+    Exceptions: 
+       - Anything after the first " ;" is ignored
+       - Any line with a parenthesis in the first word is ignored. 
+       - If it is already in forced-expression mode, prefixed by a "% ", then ignore that section .
+       - If there is an odd amout of % signs, aka one variable is missing, it'll ignore that section completely and parse everything else. 
+  
+   -----------------
+     Use: 
+   -----------------     
+     a := "you" 
+     
+     str = 
+     (
+        MsgBox 1, Hi, Hello World`, How are %a% doing today? 
+     )
+     
+     b := convert_commandline_to_expression(str)
+     
+     msgBox % b
+   -----------------     
+  
+*/
+
+^'::
+        SendClip(convert_commandline_to_expression(LineToVar()))
+return 
+
+convert_commandline_to_expression(str)
+{
+    escaped_comma := "(-..-)"
+
+    str := Rtrim(str)
+
+    ;if it is a function, leave it alone 
+    if (str ~= "^\s*?\K[\w|\d|\_]*?\((.*?)\)")
+        return str
+
+    ; if it is a comment: ? 
+          RegExMatch(str, "\s;.*?$", str_comments)
+    st := StrReplace(str, str_comments)
+
+    ; replaces all escaped commas
+    st := strReplace(st, "``,", escaped_comma)
+
+    ; split up the command by the commas 
+    st := StrSplit(st, "`,")
+
+    command_string := ""
+
+    for k, v in st 
+    {
+        ; restores the escaped comma. 
+        st[k] := strReplace(v, escaped_comma, "``,")
+
+        if (k = 1) || (trim(v) ~= "^% ")
+            command_string .= v . ", "  
+        else
+            command_string .= Convert_segment_to_Expression(st[k], k) ", "
+    }
+
+    return SubStr(command_string, 1, -2) . " " . str_comments
+}
+
+Convert_segment_to_Expression(str, param := 1)
+{
+    x := RegExReplace(str, "\%", "(__%__)", v)
+
+    if (mod(v, 2))
+    {
+        MsgBox, % 262144 + 64 + 1 , Warning!,% "Missing pair of % detected at parameter #" param ".`nOriginal string will remain untouched."  . "`n"
+        .   "`n"
+        .   x, 5
+        return str
+    }
+
+    ; if we can't find any percent signs at all...
+    if !(v)
+        str1 := """" . str . """"
+    else 
+        str1 := str 
+
+    ; find the last % sign, and see if there's any words after it. If so, put quotes around the last word. 
+    str1 := RegexReplace(trim(str1), "%((?:.(?!%))+)$", "% ""$1""")
+
+    ;  str1%var%str2 -->  "str1" var "str2"
+    str1 := RegexReplace(str1, "(.*?)\%(.*?)\%(.*?)", """$1"" $2 ""$3""")
+
+    ; replaces any extra doublequotes. 
+    str1 := StrReplace(str1, """""")
+
+    ; removes any extra 2+ spacings. 
+    str1 := "% " . (regexReplace(str1, "\s{2,}", " "))
+
+    ; removes the first space inside the first quote after the forced expression. 
+    str1 := regexReplace(str1, "^% "" ", "% """)
+    return str1
+}
+
+lineToVar()
+{
+    Sleep, 50
+    Send {End 3}
+    Sleep, 50
+    send {shift down}{home 2}{shift up}
+    return clipToVar()
+}
+
+clipToVar()
+{
+    Sleep, 50
+    oldClip := ClipboardAll
+    Clipboard := ""
+    Sleep, 50
+    Send {ctrl down}c{ctrl UP}
+    ClipWait
+    sleep, 50
+    v := clipboard
+    Clipboard := oldClip
+    oldClip := ""
+    return v
+}
+
+SendClip(str)
+{
+    sleep, 50
+    oldClip := ClipboardAll
+    Clipboard := ""
+    Clipboard := str
+    ClipWait
+    sleep, 50
+    SendInput, {Ctrl Down}v{Ctrl Up}
+    sleep, 50
+    Clipboard := oldClip
+    oldClip := ""
+return
+}
+
+    Exit()
+    {
+        ExitApp
+    }
