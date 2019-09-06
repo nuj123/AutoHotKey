@@ -1,0 +1,94 @@
+CheckForEqual(file)
+{
+    SplitPath, % file, , , , fileName
+
+    deprecated := ["IfEqual","IfNotEqual","IfLess","IfLessOrEqual","IfGreater","IfGreaterOrEqual","IfExist","IfNotExist","IfInString","IfNotInString","IfWinActive","IfWinNotActive","IfWinExist","IfWinNotExist","OnExit","SetEnv","EnvDiv","EnvMult","SetFormat","StringGetPos","StringLeft","StringRight","StringLen","StringGetPos","StringMid","StringReplace","StringSplit","StringTrimLeft","StringTrimRight"]
+
+    Commands := ["AutoTrim","BlockInput","Break","Catch","Click","ClipWait","Continue","Control","ControlClick","ControlFocus","ControlGet","ControlGetFocus","ControlGetPos","ControlGetText","ControlMove","ControlSend","ControlSendRaw","ControlSetText","CoordMode","Critical","DetectHiddenText","DetectHiddenWindows","Drive","DriveGet","DriveSpaceFree","Edit","Else","EnvAdd","EnvDiv","EnvGet","EnvMult","EnvSet","EnvSub","EnvUpdate","Exit","ExitApp","FileAppend","FileCopy","FileCopyDir","FileCreateDir","FileCreateShortcut","FileDelete","FileEncoding","FileInstall","FileGetAttrib","FileGetShortcut","FileGetSize","FileGetTime","FileGetVersion","FileMove","FileMoveDir","FileOpen","FileRead","FileReadLine","FileRecycle","FileRecycleEmpty","FileRemoveDir","FileSelectFile","FileSelectFolder","FileSetAttrib","FileSetTime","Finally","For","Format","FormatTime","GetKeyState","Gosub","Goto","GroupActivate","GroupAdd","GroupClose","GroupDeactivate","Gui","GuiControl","GuiControlGet","Hotkey","if","IfEqual","IfNotEqual","IfExist","IfNotExist","IfGreater","IfGreaterOrEqual","IfLess","IfLessOrEqual","IfMsgBox","IfWinActive","IfWinNotActive","IfWinExist","IfWinNotExist","ImageSearch","IniDelete","IniRead","IniWrite","Input","InputBox","KeyHistory","KeyWait","ListHotkeys","ListLines","ListVars","Loop","Menu","MenuGetHandle","MenuGetName","MouseClick","MouseClickDrag","MouseGetPos","MouseMove","MsgBox","OnError","OnExit","OutputDebug","Pause","PixelGetColor","PixelSearch","PostMessage","Process","Progress","Random","RegDelete","RegRead","RegWrite","Reload","Return","Run","RunAs","RunWait","Send","SendRaw","SendInput","SendPlay","SendEvent","SendLevel","SendMessage","SendMode","SetBatchLines","SetCapsLockState","SetControlDelay","SetDefaultMouseSpeed","SetEnv","SetFormat","SetKeyDelay","SetMouseDelay","SetNumLockState","SetScrollLockState","SetRegView","SetStoreCapsLockMode","SetTimer","SetTitleMatchMode","SetWinDelay","SetWorkingDir","Shutdown","Sleep","Sort","SoundBeep","SoundGet","SoundGetWaveVolume","SoundPlay","SoundSet","SoundSetWaveVolume","SplashImage","SplashTextOn","SplashTextOff","SplitPath","StatusBarGetText","StatusBarWait","StringCaseSense","StringLeft","StringLower","StringRight","StringTrimLeft","StringTrimRight","StringUpper","Suspend","SysGet","Thread","Throw","ToolTip","Transform","TrayTip","Try","Until","UrlDownloadToFile","While","WinActivate","WinActivateBottom","WinClose","WinGetActiveStats","WinGetActiveTitle","WinGetClass","WinGet","WinGetPos","WinGetText","WinGetTitle","WinHide","WinKill","WinMaximize","WinMenuSelectItem","WinMinimize","WinMinimizeAll","WinMinimizeAllUndo","WinMove","WinRestore","WinSet","WinSetTitle","WinShow","WinWait","WinWaitActive","WinWaitClose","WinWaitNotActive"]
+
+    f := FileOpen(file, "r")
+        contents := f.read()
+    f.close()
+    
+    line := strSplit(contents, "`n", "`r")
+
+    legacy := "" 
+    for k, v in line 
+        ; if it's not := 
+        if (trim(v) ~= "(.*?)[^:.+*\-~!\/|&^><]=(.*)[^{]")
+            && (!InStr(v, "Until") || !InStr(v, "until"))
+            && !(trim(v) ~= "[\%(]?(.*?)=?(.*?)\?(.*?)=?(.*?)\:?(.*?)")
+            && !(trim(v) ~= "^\.")
+            && !(trim(v) ~= "^\,")
+            && !(trim(v) ~= "^\?")
+            && !(trim(v) ~= "^\:")
+            && !(trim(v) ~= "^\&")
+            && !(trim(v) ~= "^\|")
+            && !(trim(v) ~= "^(?i)OR ")
+            && !(trim(v) ~= "^(?i)AND ")
+            && !(trim(v) ~= "^;")
+            {
+                ; loops through the command array 
+                for i, cmd in commands
+                {
+                    ch := false 
+                    ; looks to see if the line starts with a "command"
+                    if (trim(v) ~= "^(?i)" cmd)
+                    {
+                        ch := true 
+                        break 
+                    }
+                }
+
+                if !(ch)
+                    legacy .= k ": " trim(v) "`n"
+            }
+            
+        ; scan for potential deprecated commands. 
+    dep := ""
+    for  k, v in line 
+    {
+        ; ignore continuation sections
+        if !(trim(v) ~= "^\.")
+            && !(trim(v) ~= "^\,")
+            && !(trim(v) ~= "^\?")
+            && !(trim(v) ~= "^\:")
+            && !(trim(v) ~= "^\&")
+            && !(trim(v) ~= "^\|")
+            && !(trim(v) ~= "^(?i)OR ")
+            && !(trim(v) ~= "^(?i)AND ")
+
+            for x, cmd in deprecated
+            {
+                if (trim(v) ~= "^(?i)" cmd)
+                {
+                    dep .= k ": " trim(v) "`n"
+                    break
+                }
+            }
+    }
+
+    if (dep) || (legacy)
+    {
+        ; Gui Name: 
+        Gui_name := "List of Issues for " FileName 
+
+        ; build warning list: 
+        warning_list := "Potential list of issues: `n`n"
+
+        if (dep)
+            warning_list .= "[Deprecated commands]`n`n" . dep "`n`n"
+
+        if (legacy)
+            warning_list .= "[Legacy assignment (=)]`n`n" . legacy . "`n`n"
+
+        Gui, Warning_GUI%fileName%:Font, CBlack s12 w500, Courier
+
+        ; build GUI 
+        Gui, Warning_GUI%fileName%:+LastFound +AlwaysOnTop
+        Gui, Warning_GUI%fileName%:Add, % "Edit", % "section vScroll r20",  % warning_list 
+        Gui, Warning_GUI%fileName%:Show, NoActivate, % Gui_Name 
+    }
+
+    return warning_list
+}
