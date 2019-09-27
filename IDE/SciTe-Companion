@@ -1,9 +1,7 @@
 /*
-creates a gui-edit box to the right side of sciTe4AutoHotKey. 
-Each time a command is typed in, it'll look online the command and displays the stripped-down
-version of the webpage. Supports the typing of most commands. Bugs out here and there, but it works. 
-
-
+	creates a gui-edit box to the right side of sciTe4AutoHotKey. 
+	Each time a command is typed in, it'll look online the command and displays the stripped-down
+	version of the webpage. Supports the typing of most commands. Bugs out here and there, but it works. 
 */
 
 #NoEnv  ; Recommended for performance and compatibility with future AutoHotkey releases.
@@ -14,20 +12,29 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 
 OnExit("Exit")
 
-if WinExist("ahk_class SciTEWindow ahk_exe SciTE.exe") = 0
+title := "ahk_class SciTEWindow ahk_exe SciTE.exe"
+path := "C:\Program Files\AutoHotkey\SciTE\SciTE.exe"
+
+GuiTitle := "SciTe - Command Companion"
+
+Groupadd, IDE, %title%
+
+if WinExist(title) = 0
 {
-	run "C:\Program Files\AutoHotkey\SciTE\SciTE.exe"
-	WinWaitActive, ahk_class SciTEWindow ahk_exe SciTE.exe
+	run % path 
+	WinWaitActive, % title
 }
-	
-WinGetPos, x, y, w, h, ahk_class SciTEWindow ahk_exe SciTE.exe
+
+scale := 96 / A_ScreenDPI
+
+WinGetPos, x, y, w, h, % title
 
 SetTimer, MoveGui, 10
 Sleep, 1000
 
 varMoveGuiToggle:=!varMoveGuiToggle
 
-guiWidth := 300
+guiWidth := 500
 guiHeight := h - 8 ; - 40
 displayStart := 10
 
@@ -35,15 +42,15 @@ displayStart := 10
 Gui, SciTe:+LastFound -Caption
 Gui, SciTe: +Owner%hwndINFO%
 
-Gui, SciTe:Add, Edit, % "x5 y" displayStart " w" guiWidth-10 "   h" guiHeight-displayStart-30 " vScroll  vDisplayCommands +ReadOnly", Type a command to look for it on AHK
+Gui, SciTe:Add, Edit, % "x5 y" displayStart " w" guiWidth*scale-10 "   h" (guiHeight-displayStart)*scale-30 " vScroll  vDisplayCommands +ReadOnly", Type a command to look for it on AHK
 Gui, SciTe:Add, StatusBar,,  [F6] Show/Hide		[F7] = Reload
 
 Gui, SciTe:Submit, NoHide
-Gui, SciTe:Show, NA x%guiXposition% y%guiYposition% w%guiWidth% h%guiHeight%, SciTe - Command Companion
+Gui, % "SciTe:Show", % "NA x" guiXposition " y" guiYposition " w" guiWidth*scale " h" guiHeight * scale, % GuiTitle 
 SetTimer, Update, 10
 return
 
-#ifWinActive ahk_class SciTEWindow ahk_exe SciTE.exe
+#ifWinActive ahk_Group IDE
 F6::
 {
 	SetTimer, MoveGui, % (varMoveGuiToggle:=!varMoveGuiToggle) ? 10 : "OFF"
@@ -58,7 +65,7 @@ F7::Reload
 SciTeGuiClose:
 Exit()
 return
-
+#If
 ;~ CapsLock & Space::
 Update:
 	Input, name, V, {enter}{escape}{space}`,`{`(`[
@@ -69,19 +76,19 @@ Update:
 
 	;~ InputBox, Name, AHK command, Type in the AHK command to look up, , 250, 150
 
-	whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
-	whr.Open("GET", "https://www.autohotkey.com/docs/commands/" Name ".htm", true)
-	whr.Send()
-	; Using 'true' above and the call below allows the script to remain responsive.
-	whr.WaitForResponse()
-	webPage := whr.ResponseText
+	;~ whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
+	;~ whr.Open("GET", "https://www.autohotkey.com/docs/commands/" Name ".htm", true)
+	;~ whr.Send()
+	;~ ; Using 'true' above and the call below allows the script to remain responsive.
+	;~ whr.WaitForResponse()
+	;~ webPage := whr.ResponseText
 
-	;~ GuiControl, SciTe:Text, displayCommands, % webPage
-	RegexMatch(webPage, "Your client does not have permission to get URL", siteCheck)
-	;~ siteCheck := InStr(webPage, "Your client does not have permission")
+	;~ ;~ GuiControl, SciTe:Text, displayCommands, % webPage
+	;~ RegexMatch(webPage, "Your client does not have permission to get URL", siteCheck)
+	;~ ;~ siteCheck := InStr(webPage, "Your client does not have permission")
 	
 	
-	if (siteCheck = "Your client does not have permission to get URL")
+	;~ if (siteCheck = "Your client does not have permission to get URL")
 	{
 		; Can't be found. Try 2: using Google
 		;~ GoSub DisplayCommands
@@ -103,8 +110,8 @@ Update:
 			GoSub ReplaceWithRegEx
 		}
 	}
-	else
-		GoSub ReplaceWithRegEx
+	;~ else
+	;~ 	GoSub ReplaceWithRegEx
 return
 
 ReplaceWithRegEx:
@@ -159,30 +166,28 @@ displayCommands:
 	GuiControl, SciTe:Text, displayCommands, %  webText
 return
 
-#If
-
 MoveGui:
 {
-	If WinExist("ahk_class SciTEWindow ahk_exe SciTE.exe")
+	If WinExist(title)
 	{
-	   WinGetPos, x, y, w, h, ahk_class SciTEWindow ahk_exe SciTE.exe
-	   WinGet, hwndINFO, ID, ahk_class SciTEWindow ahk_exe SciTE.exe
+	   WinGetPos, x, y, w, h, % title
+	   WinGet, hwndINFO, ID, % title
 	 
 		if (x+w+GuiWidth)>A_ScreenWidth
-			GuiXposition := x - GuiWidth
+			GuiXposition := x - (Guiwidth)
 		else GuiXposition := x + w
 			
 	   GuiYposition := y
 	   
 	   ; if SciTe is active... or if the gui-script is active...
-		If WinActive("ahk_class SciTEWindow ahk_exe SciTE.exe") or WinActive("ahk_class AutoHotkeyGUI ahk_exe AutoHotkey.exe")
+		If WinActive(title) or WinActive("ahk_class AutoHotkeyGUI ahk_exe AutoHotkey.exe")
 			{
 				Gui, SciTe:Show, NoActivate x%GuiXPosition% y%GuiYPosition%
 				;~ ToolTIp % "Show " WinActive("ahk_exe SciTe.exe")
 			}
 			else 
 			{
-				If WinExist("ahk_class SciTEWindow ahk_exe SciTE.exe")
+				If WinExist(title)
 				{
 					Gui, SciTe:Show, Hide
 					;~ ToolTIp % "Hide " WinActive("ahk_exe SciTe.exe")
