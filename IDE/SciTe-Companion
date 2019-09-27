@@ -12,22 +12,28 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 
 OnExit("Exit")
 
-title := "ahk_class SciTEWindow ahk_exe SciTE.exe"
-path := "C:\Program Files\AutoHotkey\SciTE\SciTE.exe"
+title := [ "ahk_class SciTEWindow ahk_exe SciTE.exe"
+		, 	"ahk_class PX_WINDOW_CLASS ahk_exe sublime_text.exe"
+		, 	"ahk_exe notepad.exe"]
+
+path := ["C:\Program Files\AutoHotkey\SciTE\SciTE.exe"
+		, "C:\Program Files\Sublime Text 3\sublime_text.exe"
+		, "notepad.exe"]
 
 GuiTitle := "SciTe - Command Companion"
 
-Groupadd, IDE, %title%
+for each, win in title 
+	Groupadd, IDE, % win 
 
-if WinExist(title) = 0
+if !WinExist("ahk_group IDE")
 {
-	run % path 
-	WinWaitActive, % title
+	run % path[2]
+	WinWaitActive, ahk_group IDE
 }
 
 scale := 96 / A_ScreenDPI
 
-WinGetPos, x, y, w, h, % title
+WinGetPos, x, y, w, h, ahk_group IDE 
 
 SetTimer, MoveGui, 10
 Sleep, 1000
@@ -68,7 +74,7 @@ return
 #If
 ;~ CapsLock & Space::
 Update:
-	Input, name, V, {enter}{escape}{space}`,`{`(`[
+	Input, name, V, {enter}{escape}{space}{tab}`,`{`(`[
 
 ; if it's an empty string, we don't need it. 
 	if !name
@@ -168,11 +174,12 @@ return
 
 MoveGui:
 {
-	If WinExist(title)
+	If WinExist("ahk_group IDE")
 	{
-	   WinGetPos, x, y, w, h, % title
-	   WinGet, hwndINFO, ID, % title
-	 
+	    WinGetTitle, outTitle, ahk_group IDE
+	    WinGetPos, x, y, w, h, % outTitle " ahk_group IDE" 
+	    WinGet, hwndINFO, ID, % outTitle " ahk_group IDE"
+
 		if (x+w+GuiWidth)>A_ScreenWidth
 			GuiXposition := x - (Guiwidth)
 		else GuiXposition := x + w
@@ -180,9 +187,11 @@ MoveGui:
 	   GuiYposition := y
 	   
 	   ; if SciTe is active... or if the gui-script is active...
-		If WinActive(title) or WinActive("ahk_class AutoHotkeyGUI ahk_exe AutoHotkey.exe")
+		If WinActive(outTitle " ahk_group IDE") or WinActive("ahk_class AutoHotkeyGUI ahk_exe AutoHotkey.exe")
 			{
-				Gui, SciTe:Show, NoActivate x%GuiXPosition% y%GuiYPosition%
+				; to prevent the GUI from flickering to the typing location on Sublime Text
+				if OutTitle 
+					Gui, SciTe:Show, NoActivate x%GuiXPosition% y%GuiYPosition%
 				;~ ToolTIp % "Show " WinActive("ahk_exe SciTe.exe")
 			}
 			else 
