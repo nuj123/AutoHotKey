@@ -1,9 +1,7 @@
-Some ImageSearch FAQ
-
-1. If the image is found, the upper-left coordinate of where the image was found is stored in the variables that you specified for `outPutX` and `outPutY`
+1. If the image is found, the upper-left coordinate of where the image was found is stored in the variables that you specified for <outPutX> and <outPutY>
 
 2. How do I know if the image was found?
-> AHK throws an `ErrorLevel` upon executing the `imagesearch` script. For you to check to see if the image was found, you'll have to check what the value of the `ErrorLevel` is. For imagesearch, the possible values for the `ErrorLevel` is `0`, `1`, and `2`. 
+> AHK throws an <ErrorLevel> upon executing the <imagesearch> script. For you to check to see if the image was found, you'll have to check what the value of the <ErrorLevel> is. For imagesearch, the possible values for the <ErrorLevel> is <0>, <1>, and <2>. 
  
 3. What does it mean if the ErrorLevel is 0, 1, or 2? 
 	With Imagesearch, if the ErrorLevel is...
@@ -26,8 +24,8 @@ else if (ErrorLevel = 2)
 	MsgBox An error occurred. 
 }
 ```
-4. I ran everything correctly. My region coordinates are correct, my filepath is correct. I directly took a screenshot of the image and used that image, but `imagesearch` isn't finding it at all! What's going on? 
-> Likely, when you saved your image, your image was slightly compressed or something, resulting in a "not exact pixel-for-pixel" match. You may have to add in a variation to your imagesearch, using `*Number ImageFile`, where `Number` is a number ranging from `0` to `255`. `0 = exact pixel-for-pixel match`, and `255 = match anything`. Go ahead and put a variation of, say, `100` in your imagesearch and see if it could be found. The format would look like this: 
+4. I ran everything correctly. My region coordinates are correct, my filepath is correct. I directly took a screenshot of the image and used that image, but <imagesearch> isn't finding it at all! What's going on? 
+> Likely, when you saved your image, your image was slightly compressed or something, resulting in a "not exact pixel-for-pixel" match. You may have to add in a variation to your imagesearch, using <umber ImageFile>, where <Number> is a number ranging from <0> to <255>. <= exact pixel-for-pixel match>, and <5 = match anything>. Go ahead and put a variation of, say, <100> in your imagesearch and see if it could be found. The format would look like this: 
 ```
 ImageSearch, OutX, OutY, X1, Y1, X2, Y2, *100 ImageFile
 ```
@@ -83,7 +81,7 @@ If (ErrorLevel = 0) {
 ```
 
 6. I want to look for my image continuously. What can I do? 
-> You can use a `Loop` or a `SetTimer` to run your imagesearch continuously. 
+> You can use a <Loop> or a <SetTimer> to run your imagesearch continuously. 
 ```
 Loop {
 	Imagesearch...
