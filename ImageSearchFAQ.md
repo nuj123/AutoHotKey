@@ -1,4 +1,10 @@
 ## Some ImageSearch FAQ
+The format for the `imagesearch` command goes as follow:
+```
+ImageSearch, OutputVarX, OutputVarY, X1, Y1, X2, Y2, *IconN *Variation *TransN *wn *hn ImageFile
+```
+Every one of the `*` options are optional. You can read more about their usage in the documentation: 
+https://www.autohotkey.com/docs/commands/ImageSearch.htm
 
 1. If the image is found, the upper-left coordinate of where the image was found is stored in the variables that you specified for `outPutX` and `outPutY`
 
