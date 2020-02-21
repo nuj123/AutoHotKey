@@ -1,3 +1,5 @@
+## Some ImageSearch FAQ
+
 1. If the image is found, the upper-left coordinate of where the image was found is stored in the variables that you specified for `outPutX` and `outPutY`
 
 2. How do I know if the image was found?
