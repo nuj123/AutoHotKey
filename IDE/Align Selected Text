@@ -1,0 +1,195 @@
+#SingleInstance, Force
+; select a few lines of text. 
+; press ctrl+shift+a to auto-align by commas. 
+  ; OR hold ctrl+shift+a to be able to type in your delimited values. 
+  
+/*
+Example text to work with: Select the four lines, and press Ctrl+shift+a 
+
+  clickit(190, 2390932, 29032)
+  clickit(2930923, 2901, 38920939, 209932, 203)
+  MoreClick(2093209, 2309108, 239023)
+  LeftClicks(9102,12091021293,123091239)
+
+or with these four lines selected, press and HOLD ctrl+shift+a
+
+	198.1.1.123
+	255.255.255.255
+	14.12.11.10
+	194.231.12.1
+*/
+
+^+a::
+	; hold the A key for half a second to change the delimiter 
+	keywait, a, T0.5
+	If (ErrorLevel = 1)	; if it times out, set Delimiter 
+	{
+		; awesome input box to change delimiters 
+		InputBox, delimit, Enter in delimiter, Enter in the delimited value. Escape characters as necessary. Press "Cancel" to default to using a comma. 
+		If (ErrorLevel = 1)
+		delimit := "`,"
+	}
+	else 
+		delimit := "`,"
+
+	; clipboard check to see if anything was selected 
+	Temp := ClipboardAll
+	Clipboard := ""
+	Send ^c 
+	Clipwait, 2
+
+	; if clip is blank (or it times out)
+	; some IDE copies the line that the cursor is on even if you didn't select anything in that line. 
+	if (Clipboard = "") || (ErrorLevel = 1)
+	{
+		MsgBox, Error: Nothing selected
+		Clipboard := Temp
+		Return 
+	}
+
+	string := clipboard 
+
+AlightText(string, delimit)
+return 
+
+AlightText(string, delimit := "`,")	
+{
+	; blank and initialize variables 
+	str := ""
+	Max_Index := []
+	Max_Param := 0
+
+	; stores clipboard into variable for easy manipulation
+	; string := Clipboard
+	; pulls string from parameters instead 
+	
+
+	; checks to see if they're functions
+	If RegexMatch(string, "(.*?\w+)\((.*?)\)\{?")
+		Functions := True 
+	else 
+		Functions := False
+
+	; splits the values by the line
+	Line_of_Code := strSplit(string, "`n", "`r")
+
+	; Presort the first half: 
+	
+	if (Functions)
+	{
+		maxPOs := 0
+		param_list := []
+		function_list := []
+
+		for k, v in Line_Of_Code
+		{
+			; if it's a blank line: 
+			if (v = "")
+			{
+				function_List.push("")
+				param_list.push("")
+			}
+
+			; if it fits the format of function(x, y, etc*)
+			If RegExMatch(v, "O)^(.*?\w+)\((.*?)\)\{?", out)
+			{
+				position := StrLen(out[1])
+				function_List.push(out[1])
+				param_list.push(trim(out[2]))
+				
+				; searches for the max character length of the pre-parenthesis 
+				if (Position > MaxPos)
+					MaxPos := Position
+			}
+		}
+
+		Line_Of_Code := Param_list.clone()
+	}
+
+	; account for the opening parenthesis
+	MaxPos++
+
+	for k, v in Line_of_Code
+	{	
+		; split the line up by commas
+		split := StrSplit(v, delimit)
+
+		; count how many parameters we have max
+		if (Max_Param < split.count())
+			Max_Param := split.count()
+
+		; checks the max length of each parameter 
+		for index, param in split 
+		{
+			p := trim(param)
+
+			if (Max_Index[Index] < StrLen(p))
+				Max_INdex[Index] := StrLen(p)
+		}
+	}
+
+	loop, % max_Index.count()
+	{
+		max_Index[A_INdex] += 1
+	}
+
+	; builds string 
+
+	for k, v in Line_of_Code 
+	{
+		; go back to the beginning of the List
+
+		; if blank:
+		if (v = "") 
+		{
+			str .= "`n"
+			continue
+		}
+
+		; format each section according to the max section 
+		split := strSplit(v, delimit)
+
+		; build list 
+		for index, param in split
+		{
+			; determines if it's the last parameter or not. If not, keep throwing our commas/Delimiter
+			end_char := (Index = split.count()) ? "" : delimit
+
+			; if it could potentially be a function AND is at the beginning of the list, 
+			if (Functions) && (A_Index = 1)
+				str .= format("{:" MaxPos "}", function_list[k] "(")
+
+			str .= format("{:" Max_Index[index] "}", trim(param)) . end_char 
+
+		}
+
+		pad := Max_Param - split.count() 
+
+		if (split.count() < Max_Param)
+			Loop, % Max_Param 
+			{
+				if (A_Index <= split.count())
+					Continue
+
+				pad += Max_Index[A_Index]
+			}
+		
+		; pads extra spacing before + after delimiter 
+		; (Max_Param - 1)
+
+		; output list.
+		If (Functions)
+			; pad + 1 to account for the closing parenthesis 
+		 	str .= format("{:" pad + 1 "}", ")") 
+
+		 ; Dont add an extra line break at the end of the script.
+		if !(A_Index = Line_Of_Code.count())
+			str .= "`n"
+	}
+	clipboard := str
+	Clipwait 
+	send ^v
+	clipboard := tempClipboard
+	; sendInput {text}%str%
+}
+return 
