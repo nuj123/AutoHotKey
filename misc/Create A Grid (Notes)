@@ -1,0 +1,241 @@
+#SingleInstance, Force
+; Step 1: Determine which monitor you want to use. We'll grab the coordinates of that monitor using SysGet:
+; in this example, we're grabbing the coordinates of monitor 1.
+which_monitor := 1
+
+SysGet, mon, monitor, % which_monitor
+
+; now, the (x1, y1) and (x2, y2) coordinates of your monitor will now be stored in the variables: "mon", followed by left/right/top/bottom. 
+; (monLeft, monTop) and (monRight, monBottom)
+; for this purpose, we're going to call it (xMin, yMin) and (xMax, yMax). 
+xMin := monLeft
+yMin := monTop
+
+xMax := monRight
+yMax := monBottom 
+
+; okay, so now we've established the boundaries of our grid. Time to establish each individual lines. 
+; lets say we want 10 squares, across. Our boundaries is from xMin to xMax, yMin to yMax. 
+line := 10
+
+; We want to find out how much to increment the grid lines by. We can do that, mathematically, by doing this: 
+x_increment := (xMax - xMin) // line 
+
+; Our first line starts at (xMin). So lets set our (x) to equal (xMin)
+x := xMin
+
+; and our (y) starts at (yMin)
+y := yMin
+; And we draw our first line. 
+
+; Simplest way to draw a (straight) line is to use a GUI. 
+; the format for creating a GUI is: 
+; Gui, Show, NoActivate x(x-coordinate) y(y-coordinate) w(width) h(height), (Gui_Title)
+; we'll be replacing the (x-coordinate), (y-coordinate), (width), and (height) to "move" the grids along. 
+; we'll give it a Gui_Title too to help us manipulate the GUI. This will be for later. 
+
+
+; 
+; now, if we're to simply run the Gui command as-is, it'll create a windows. 
+; first, lets create vertical lines. We want our window to be a width of 1, and the height would be the difference from (y-min) to (y-max). 
+w := 1
+h := yMax - yMin
+
+; the (x-coordinate) value would start at (x) that we created earlier, and the (y) would be at (yMin)
+; Putting it all together, our GUI command looks like this: 
+
+/*
+	; you can either do it in string mode: 
+	Gui, Show, NoActivate x%x% y%yMin% w%w% h%h%
+
+	; or you can do it in expression mode: 
+	Gui, Show, % "NoActivate x" x " y" yMin " w" w " h" h
+
+	; both of those would do the same thing. 
+*/
+
+; but wait, we want to get rid of the title bar, the captions, and such. We want these lines to always be on top, and we want to be able to click through the lines. These are the GUI-options that we'll have to set before hand. 
+; so to create them, it now becomes this (note, I'll be using expression mode from here on:)
+
+/*
+	Gui, -Caption +AlwaysOnTop +E0x20
+	Gui, Show, % "NoActivate x" x " y" yMin " w" w " h" h
+*/
+
+; this is how we create our first line. 
+
+; every time (x_increment) is added onto our current (x) value, we'll get the next coordinate point. So we'll do this: 
+
+/*
+	x := x + x_increment 
+*/
+
+
+; We'll then loop this until we reach the end of our monitor (xMax)
+/*
+	While (x < xMax)
+	{
+		Gui, -Caption +AlwaysOnTop +E0x20
+		Gui, Show, % "NoActivate x" x " y" yMin " w" w " h" h
+
+		; increment our X 
+		x := x + x_increment 
+	}
+*/
+
+; The problem with "While (x < xMax)" is that it'll create a line *after* it passes xMax. To account for that, we'll use "x + x_increment". 
+
+/*
+	While ((x + x_increment) < xMax)
+*/
+
+; To create multiple GUIs, we'll have to name each GUI something different. For simplicity's sake, I'll call this X_2_1. 
+; (X) because we're changing along the x-axis. 
+; (2) because it's the second monitor. 
+; (1) because it's our first line. 
+
+; To be flexible for other monitors, we'll have to use the variable "which_monitor" that we established in the beginning of the script. 
+
+; and we'll use the built-in variable (A_Index) to keep track of which line we're at: 
+
+/*
+	X_%which_monitor%_%A_index%
+*/
+
+; So we'll insert that title into our GUI. This way we can create *multiple* GUIs now. 
+; We'll also use "WinSet, Transparent, 100, (title)" to set the transparency of the lines to "100" (from 0 - 255) 
+
+; Additionally, you can choose line colors by using "Gui, Color, (color)"
+
+; The code should now look something like this: 
+
+	While ((x + x_increment) < xMax)
+	{
+		; sets color to red. It supports hexcode too, like "FF2300"
+		Gui, X_%which_monitor%_%A_index%:Color, Red
+
+		Gui, X_%which_monitor%_%A_index%:-Caption +AlwaysOnTop +E0x20
+		Gui, X_%which_monitor%_%A_index%:Show, % "NoActivate x" x " y" y " w" w " h" h, X_%which_monitor%_%A_index%
+
+		; sets the transparency
+		Winset, Transparent, 100, X_%which_monitor%_%A_Index%
+
+		; increment our X 
+		x := x + x_increment 
+	}
+
+; And voila! You've drawn vertical lines from xMin to xMax! Now we just do the same for yMin to yMax! 
+; note: the Gui Title changes from (x) to (y). 
+; note: we're creating horizontal lines now. 
+	; our height (h) would be 1
+	h := 1 
+	; our widht (w) would be the difference of (xMin) and (xMax) 
+	w := xMax - xMin
+	; our (x) is always going to start at (xMin)
+	x := xMin
+	; our (y) is the one that's changing. But we're starting it at (yMin) first
+	y := yMin
+		; if you want consistent spacing like with your vertical grids, we'll have to use the same (x_increment) from above. 
+		y_increment := (xMax - xMin) // line 
+
+		; if you want same (lines), and it doesn't matter if your grid-squares aren't squares, you'll have to calculate y_increment using the screen height. 
+		/*
+			y_increment := (yMax - yMin) // line 
+		*/
+		
+	While ((y + y_increment) < yMax)
+	{
+		; sets color to green. It supports hexcode too, like "FF2300"
+		Gui, y_%which_monitor%_%A_index%:Color, Green  
+
+		Gui, y_%which_monitor%_%A_index%:-Caption +AlwaysOnTop +E0x20
+		Gui, y_%which_monitor%_%A_index%:Show, % "NoActivate x" x " y" y " w" w " h" h, y_%which_monitor%_%A_index%
+
+		; sets the transparency
+		Winset, Transparent, 100, y_%which_monitor%_%A_index%
+
+		; increment our ()
+		y := y + y_increment 
+	}
+
+return
+
+; Aaaand we're done! Here's how it would look like without all the comments: 
+{
+	which_monitor := 2
+
+	SysGet, mon, monitor, % which_monitor
+
+	xMin := monLeft, yMin := monTop
+	xMax := monRight, yMax := monBottom 
+
+	line := 10
+
+	x_increment := (xMax - xMin) // line 
+
+	x := xMin, y := yMin, w := 1, h := yMax - yMin
+
+	While (x < xMax)
+	{
+		Gui, X_%which_monitor%_%A_index%:Color, Red
+		Gui, X_%which_monitor%_%A_index%:-Caption +AlwaysOnTop +E0x20
+		Gui, X_%which_monitor%_%A_index%:Show, % "NoActivate x" x " y" y " w" w " h" h, X_%which_monitor%_%A_index%
+		Winset, Transparent, 100, X_%which_monitor%_%A_Index%
+		x := x + x_increment 
+	}
+
+	h := 1, w := xMax - xMin, x := xMin, y := yMin, y_increment := (xMax - xMin) // line 
+		
+	While (y < yMax)
+	{
+		Gui, y_%which_monitor%_%A_index%:Color, Green  
+		Gui, y_%which_monitor%_%A_index%:-Caption +AlwaysOnTop +E0x20
+		Gui, y_%which_monitor%_%A_index%:Show, % "NoActivate x" x " y" y " w" w " h" h, y_%which_monitor%_%A_index%
+		Winset, Transparent, 100, y_%which_monitor%_%A_index%
+		y := y + y_increment 
+	}
+}
+return
+
+; turning it into a function is pretty easy too. Let's set our parameters as "which monitor to use", and "how many lines". 
+
+; to call the function: 
+makeGrids(2, 10)
+
+return 
+
+; function: 
+makeGrids(which_monitor, line)
+{
+	SysGet, mon, monitor, % which_monitor
+
+	xMin := monLeft, yMin := monTop
+	xMax := monRight, yMax := monBottom 
+
+	x_increment := (xMax - xMin) // line 
+	x := xMin, y := yMin, w := 1, h := yMax - yMin
+
+	While (x < xMax)
+	{
+		Gui, X_%which_monitor%_%A_index%:Color, Red
+		Gui, X_%which_monitor%_%A_index%:-Caption +AlwaysOnTop +E0x20
+		Gui, X_%which_monitor%_%A_index%:Show, % "NoActivate x" x " y" y " w" w " h" h, X_%which_monitor%_%A_index%
+		Winset, Transparent, 100, X_%which_monitor%_%A_Index%
+		x := x + x_increment 
+	}
+
+	h := 1, w := xMax - xMin, x := xMin, y := yMin, y_increment := (xMax - xMin) // line 
+		
+	While (y < yMax)
+	{
+		Gui, y_%which_monitor%_%A_index%:Color, Green  
+		Gui, y_%which_monitor%_%A_index%:-Caption +AlwaysOnTop +E0x20
+		Gui, y_%which_monitor%_%A_index%:Show, % "NoActivate x" x " y" y " w" w " h" h, y_%which_monitor%_%A_index%
+		Winset, Transparent, 100, y_%which_monitor%_%A_index%
+		y := y + y_increment 
+	}
+	return 
+}
+
+f8::Reload
+^`::ExitApp
