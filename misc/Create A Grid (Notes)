@@ -1,6 +1,6 @@
 #SingleInstance, Force
 ; Step 1: Determine which monitor you want to use. We'll grab the coordinates of that monitor using SysGet:
-; in this example, we're grabbing the coordinates of monitor 1.
+; in this example, we're grabbing the coordinates of monitor 1. 
 which_monitor := 1
 
 SysGet, mon, monitor, % which_monitor
@@ -162,7 +162,7 @@ return
 
 ; Aaaand we're done! Here's how it would look like without all the comments: 
 {
-	which_monitor := 2
+	which_monitor := 1
 
 	SysGet, mon, monitor, % which_monitor
 
