@@ -1,0 +1,331 @@
+#SingleInstance, Force 
+
+/*
+    Open up a QR code, from a page like this: 
+    https://confident-sammet-65a8ec.netlify.com/#/qrcode
+    
+    Turn on script. Admin mode is enabled to prevent browser from hijacking hotkeys. 
+    
+    Directions: 
+    - Press F1 to initialize script. You will then have an option to click + drag to select region. 
+    - Once done so, press the [<<] or [>>] to adjust the grid to match the QR code. You can also type in a number. 
+    - Press [Okay] to generate code. 
+    - Wait until code is generated. It should be saved onto your clipboard. 
+    
+    Video demonstration:
+    https://cdn.discordapp.com/attachments/596797437281042434/683656673864318986/QR_code.gif
+    
+*/
+full_command_line := DllCall("GetCommandLine", "str")
+
+if not (A_IsAdmin or RegExMatch(full_command_line, " /restart(?!\S)"))
+{
+    try
+    {
+        if A_IsCompiled
+            Run *RunAs "%A_ScriptFullPath%" /restart
+        else
+            Run *RunAs "%A_AhkPath%" /restart "%A_ScriptFullPath%"
+    }
+    ExitApp
+}
+
+SetBatchLines, -1
+CoordMode, Mouse
+CoordMode, Pixel
+CoordMode, ToolTip
+
+; disables F1: 
+
+Tip("Press F1 to begin")
+; results table 
+
+rows := 21
+
+; Grid setup to check for comparison
+Gui, Options:+AlwaysOnTop -Caption +ToolWindow +LastFound   ; allows clickthrough 
+Gui, Options:Add, Text, vTextRow, Specify the amount of columns/rows: 
+Gui, Options:Add, Edit, vRows w150 Number gShowGrid, % rows
+Gui, Options:Add, Button, section gLess vButton_Less, <<
+Gui, Options:Add, Button, ys gMakeQR default vButton_OK, &Okay - Generate QR!
+Gui, Options:Add, Button, ys gMore vButton_More, >> 
+return 
+
+; starting instructions
+F1::
+    MakeGrids()
+    MakeQR()
+    Tip("Click + Drag to create your rectangle")
+
+
+    ; creates a blank GUI to prevent unwanted interaction with windows. 
+    Gui, Blank:+AlwaysOnTop -Caption +ToolWindow +LastFound 
+    Gui, Blank:Color, White 
+    Gui, Blank:Show, x0 y0 w%A_ScreenWidth% h%A_ScreenHeight%, Blank 
+    WinSet, Transparent, 100, A
+
+    x1:=y1:=x2:=y2:=0
+
+     ; if you click and released
+    while (x1 = x2) && (y1 = y2)
+        ; click + drag to get boundaries
+        DrawRect(x1, y1, x2, y2)
+
+    ; removes our blank
+    Gui, Blank:Destroy
+
+    Tip()
+
+    ; finds width and height 
+    w := x2 - x1
+    h := y2 - y1
+
+    ; creates a grid so we can compare to see if we have the right number of lines 
+    Gui, Options:Show, , Grid
+    Gui, Options:Show, % "x" (x1 + (w // 2) - 50) " y" y2 , Options
+    
+    ; creates grid 
+    GoSub ShowGrid
+return 
+
+; show less column/rows
+Less: 
+    if (rows < 1)
+        return 
+
+    GuiControl, Text, Rows, % --rows
+    GoSub ShowGrid 
+return 
+
+; show more column/ rows 
+More:
+    GuiControl, Text, Rows, % ++rows 
+    GoSub ShowGrid 
+return 
+
+; go create grids 
+ShowGrid: 
+    Gui, Submit, NoHide 
+    if (rows < 1)
+        return
+    if !rows 
+        return
+
+; blank out any potential grids first 
+    MakeGrids()
+
+    ; pass on our region 
+    MakeGrids(x1, y1, x2, y2, rows)
+    GuiControl, Focus, rows
+return 
+
+MakeQR:
+    Gui, Submit, NoHide
+
+    ; disables all other controls while loading.
+    GuiControl, Disable, TextRow 
+    GuiControl, Text, TextRow, Grabbing pixel colors....
+    GuiControl, Disable, Rows 
+    GuiControl, Disable, Button_Less
+    GuiControl, Disable, Button_OK
+    GuiControl, Disable, Button_More
+    GuiControl, Disable, Rows 
+
+    ; clears QR 
+    MakeQR()
+
+    ; makes QR code 
+    MakeQR(x1, y1, x2, y2, rows)
+    SoundBeep
+    SetTimer, TurnOff, -5000
+
+    ; re-enable the controls for future F1 use 
+    GuiControl, Enable, TextRow 
+    GuiControl, Text, TextRow, Specify the amount of columns/rows:
+    GuiControl, Enable, Rows 
+    GuiControl, Enable, Button_Less
+    GuiControl, Enable, Button_OK
+    GuiControl, Enable, Button_More
+    GuiControl, Enable, Rows 
+
+    ; hides GUI
+    Gui, Options:Hide
+return 
+
+TurnOff:
+    MakeQR()
+    MakeGrids()
+    Tip()
+return 
+
+; ----------- Labels ----------
+
+; ---------- Functions --------
+Exit()
+{
+    ExitApp
+}
+; ---------- --------- --------
+
+Tip(text := "", center := true) {
+        ToolTip, % text, A_ScreenWidth // 2, center ? A_ScreenHeight // 2 : 0, 10
+}
+
+; just a function to draw a rectangle on left click+drag 
+DrawRect(ByRef X1, ByRef Y1, ByRef X2, ByRef Y2)
+{
+    static r := 3
+    ; Create the "selection rectangle" GUIs (one for each edge).
+    Loop 4 {
+        Gui, %A_Index%: -Caption +ToolWindow +AlwaysOnTop +LastFound
+    WinSet, Transparent, 100
+        Gui, %A_Index%: Color, Green
+    }
+  
+  Gui, 5: -Caption +ToolWindow +AlwaysOnTop +LastFound
+  WinSet, Transparent, 50
+  Gui, 5: Color, red
+  
+    
+  ; Disable LButton.
+    Hotkey, *LButton, lusr_return, On
+    ; Wait for user to press LButton.
+    KeyWait, LButton, D
+    ; Get initial coordinates.
+    MouseGetPos, xorigin, yorigin
+    ; Set timer for updating the selection rectangle.
+    SetTimer, lusr_update, 10
+    ; Wait for user to release LButton.
+    KeyWait, LButton
+    ; Re-enable LButton.
+    Hotkey, *LButton, Off
+    ; Disable timer.
+    SetTimer, lusr_update, Off
+    ; Destroy "selection rectangle" GUIs.
+    Loop 5
+        Gui, %A_Index%: Destroy
+    return
+ 
+    lusr_update:
+        MouseGetPos, x, y
+        if (x = xlast && y = ylast)
+            ; Mouse hasn't moved so there's nothing to do.
+            return
+        if (x < xorigin)
+             x1 := x, x2 := xorigin
+        else x2 := x, x1 := xorigin
+        if (y < yorigin)
+             y1 := y, y2 := yorigin
+        else y2 := y, y1 := yorigin
+        ; Update the "selection rectangle".
+        Gui, 1:Show, % "NA X" x1 " Y" y1 " W" x2-x1 " H" r
+        Gui, 2:Show, % "NA X" x1 " Y" y2-r " W" x2-x1 " H" r
+        Gui, 3:Show, % "NA X" x1 " Y" y1 " W" r " H" y2-y1
+        Gui, 4:Show, % "NA X" x2-r " Y" y1 " W" r " H" y2-y1
+        Gui, 5:Show, % "NA X" x1 " Y" y1 " W" abs(x2-x1) " H" abs(y2-y1)
+    lusr_return:
+    return
+}
+
+; create lines for visual comparison. 
+makeGrids(xMin:="", yMin:="", xMax:="", yMax:="", rows:="") {
+
+    if (xMin = "") && (xMax = "") && (yMin = "") && (yMax = "") && (row = "")
+    {
+        Gui, Grid:Destroy
+        return 
+    }
+
+    w := xMax - xMin
+    h := yMax - yMin 
+
+    ; finds how much we need to increment our lines by
+    increment := (w / (rows))
+
+    x := 0, y := 0, h := 1
+
+    c := "0x8"
+
+    ; creates grid  
+    While (y <= (yMax - yMin))
+    {
+        Gui, Grid:Add, Text, % "x" x " y" y " h" 1 " w" w " " c
+        y += increment 
+    }
+
+    ; creates grid 
+    x := 0, y := 0, w := 1, h := yMax - yMin
+        
+    While (x <= (xMax - xMin))
+    {
+        Gui, Grid:Add, Text, % "x" x " y" y " h" h " w" w " " c
+        x += increment 
+    }
+
+    Gui, Grid: +AlwaysOnTop -ToolWindow +LastFound -Caption +E0x20 
+    Gui, Grid:Color, EFEFEF
+    Winset, TransColor, EFEFEF
+
+    w := xMax - xMin
+    h := yMax - yMin 
+    
+    Gui, Grid:Show, % "NA x" xMin " y" yMin " w" w " h" h, Grid1
+}
+
+MakeQR(xMin:="", yMin:="", xMax:="", yMax:="", rows:="") {
+
+    if (xMin = "") && (xMax = "") && (yMin = "") && (yMax = "") && (row = "")
+    {
+        Gui, Grid2:Destroy
+        return 
+    }
+
+    increment := ((xMax - xMin) / (rows))
+
+    ; creates the coordinates to save pixel
+    pix_inc := increment / 2
+
+    pix_x := pix_Inc 
+    pix_y := pix_Inc
+
+    x := 0, y := 0, h := w := increment / 2
+
+    pix_Inc -= (h / 2)
+
+        Gui, Grid2: +AlwaysOnTop -ToolWindow +LastFound -Caption +E0x20 
+        Gui, Grid2:Color, EFEFEF
+        Winset, TransColor, EFEFEF
+
+    str := "" 
+
+    While (y + pix_inc <= (yMax - yMin))
+    {
+        While (x + pix_inc <= (xMax - xMin))
+        {
+            y_Index := A_index 
+            PixelGetColor, out, % x + pix_Inc + xMin, % y + pix_Inc + yMIN, RGB 
+            Red:="0x" SubStr(out,3,2)
+            red := red + 0
+            str .= (red ? "0" : "1")
+
+                Gui, Grid2:Add, Picture, % "x" x + pix_inc " y" y + pix_inc " h" h " w" w "gMove_Window", % red ? "black.png" : "white.png"
+            x += increment 
+        }
+
+        GuiControl, Text, Textrow, % "Loading: " A_Index / rows * 100 " %"
+        x := 0 
+        y += increment 
+    }
+
+    Gui, Grid2:Show, % "NA x" xMin " y" yMin " w" xMax - xMin " h" yMax - yMin, Grid2
+
+    Tip()
+
+    clipboard := str 
+    Clipwait
+
+    Tip("QR Code has been copied to clipboard")
+    return
+}
+F8::Reload
+*Esc::ExitApp
