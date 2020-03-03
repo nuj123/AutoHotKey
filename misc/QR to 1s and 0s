@@ -177,12 +177,12 @@ DrawRect(ByRef X1, ByRef Y1, ByRef X2, ByRef Y2)
     static r := 3
     ; Create the "selection rectangle" GUIs (one for each edge).
     Loop 4 {
-        Gui, %A_Index%: -Caption +ToolWindow +AlwaysOnTop +LastFound
+        Gui, %A_Index%: -Caption +ToolWindow +AlwaysOnTop +LastFound -DPIScale
     WinSet, Transparent, 100
         Gui, %A_Index%: Color, Green
     }
   
-  Gui, 5: -Caption +ToolWindow +AlwaysOnTop +LastFound
+  Gui, 5: -Caption +ToolWindow +AlwaysOnTop +LastFound -DPIScale
   WinSet, Transparent, 50
   Gui, 5: Color, red
   
