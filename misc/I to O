@@ -1,0 +1,14 @@
+#SingleInstance, Force 
+#Persistent
+SendMode, Input 
+
+toggle := 1
+
+^F1::toggle := !toggle
+
+
+#If (toggle)
+	:*?:ii::o
+#if 
+
+^esc::exitapp
