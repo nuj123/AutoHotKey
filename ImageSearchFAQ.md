@@ -3,10 +3,22 @@ The format for the `imagesearch` command goes as follow:
 ```
 ImageSearch, OutputVarX, OutputVarY, X1, Y1, X2, Y2, [IconN] [*Variation] [TransN] [wn] [hn] ImageFile
 ```
+Note: X1, Y1, X2, Y2 are relative to current active window, unless you set it to search using screen coordinates. 
+```
+; set pixel to screen mode 
+CoordMode, Pixel, Screen
+
+Imagesearch...
+```
+If you're going to do some clicking based on the coordinates found in OutPutVarX and OutPutVarY, you may have to set your mouse coordmode to screen also
+```
+CoordMode, Mouse, Screen
+```
+
 Every one of the `[]` options are optional. You can read more about their usage in the documentation: 
 https://www.autohotkey.com/docs/commands/ImageSearch.htm
 
-1. If the image is found, the upper-left coordinate of where the image was found is stored in the variables that you specified for `outPutX` and `outPutY`
+1. If the image is found, the upper-left coordinate of where the image was found is stored in the variables that you specified for `outPutX` and `outPutY`. 
 
 2. How do I know if the image was found?
 > AHK throws an `ErrorLevel` upon executing the `imagesearch` script. For you to check to see if the image was found, you'll have to check what the value of the `ErrorLevel` is. For imagesearch, the possible values for the `ErrorLevel` is `0`, `1`, and `2`. 
