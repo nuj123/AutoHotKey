@@ -1,0 +1,175 @@
+#SingleInstance, Force 
+/*
+ by default, the whole script is processing whatever is held in the variable "str" 
+ if you want it to work on your clipboard, do: 
+
+	 str := clipboard
+*/
+
+; pseudo-data for demonstration purposes
+str = 
+(
+Small bowel:
+
+● Disease location: [terminal ileum, jejunum, etc]
+
+● Enhancement pattern and wall thickening: [mural stratification, homogeneous, thick, yes/no]
+
+● Length of disease: {in cm}
+
+● Edema and restricted diffusion (MRI only): {if yes, location}
+
+● Stricture: [present, luminal narrowing without upstream dilatation, none]
+
+Colon:
+
+● Disease location: [ascending, transverse, etc.]
+
+● Enhancement pattern and wall thickening: [mural stratification, homogeneous]
+● Length of disease: {in cm}
+)
+
+; ------------------------------------
+; ------- EDITABLE OPTIONS -----------
+; ------------------------------------
+
+; FONT settings 
+
+font_header := 16
+
+	font_header_bold := 1
+	font_header_underline := 1
+	font_header_italics := 0
+
+font_regular := 10
+
+font_type := "Calibri"
+font_color := "Black"
+; font_color := "B0D2D9"
+
+Gui_BackGround_Color := 0xF0F0F0
+; Gui_BackGround_Color := 0x36393F
+
+Gui_Control_Color := 0xFFFFFF
+; Gui_Control_Color := 0x2F3136 
+
+; GUI Spacings: 
+width_left_Texts := 300
+width_right_Texts := 300
+
+; ------------------------------------
+; --- END OF EDITABLE OPTIONS --------
+; ------------------------------------
+
+; Initialize GUI Fonts 
+Gui, Font, c%font_Color%, % font_Type
+
+Gui, Color, %Gui_BackGround_Color%, %Gui_Control_Color%
+; blank space 
+Gui, Add, Text, section
+
+; ----------- REGEX NEEDLES (Don't modify) ---------------
+	; needle to find in brackets: 
+	needle_brackets := "^(.*?)\:.*[\[|\{](.*)[\]|\}]"
+
+	; will need when we replace the "," with "|"
+	needle_commas := ",\s?+"
+; ---------------------------------------------------------
+
+; splits the copied text line by line 
+paragraph := strSplit(str, "`n", "`r") 
+
+; goes through each line, one at a time
+for each, line in paragraph
+{
+	; ignores blank line 
+	if !line
+		continue 
+	
+	; if "{", edit box 
+	else if InStr(line, "{")
+	{
+		; matches what's on the left of the ":" as oReg.1
+		; matches what's inside the brackets "{}" as oReg.2
+		RegExMatch(line, "O)" needle_brackets, oReg)
+
+		; adds a GUI text option on the left of the GUI 
+		Gui, Add, Text, xs section w%Width_Left_Texts%, % oReg.1
+
+		; Adds a GUI text box on the right of the GUI 
+		Gui, Add, Edit,   ys	hwndLine%A_Index%	w%Width_Right_Texts%
+		
+		; Adds in the Cue Banner / hints / default value. 
+		EM_SetCueBanner(oReg.2, Line%A_Index%)
+
+	} 
+
+	; if "[", list box
+	else if InStr(line, "[")
+	{
+		; matches what's on the left of the ":" as oReg.1
+		; matches what's inside the brackets "[]" as oReg.2
+		RegExMatch(line, "O)" needle_brackets, oReg)
+
+		; adds a GUI text option on the left of the GUI 
+		Gui, Add, Text, xs section w%Width_Left_Texts%, % oReg.1
+
+		; takes the comma-delimited value we have inside our bracket, 
+		; and replace every "," with "|" to generate our piped-delimited list 
+		; to be used for `GUI, Add, ListBox`
+		piped_list := RegexReplace(oReg.2, needle_commas , "|", rCount)
+		rCount++
+
+		; creates GUi, ListBox on the right side of the screen 
+		; added 'multi' option to enable multiple selection by holding shift/control 
+		Gui, Add, ListBox, ys	hwndLine%A_Index%	w%Width_Right_Texts%	r%RCount%	 multi
+			,  % piped_list 
+
+	}
+
+	; if neither brackets are present, create a text: 
+	else
+	{
+		; no brackets means we're in a new section 
+		; bold the text. Underline it 
+
+			is_header_bold 		:= font_header_bold 	 ? "bold"      : ""
+			is_header_italics 	:= font_header_italics	 ? "italics"   : "" 
+			is_header_underline := font_header_underline ? "underline" : ""
+
+		Gui, Font, s%font_header% %is_Header_Bold% %Is_header_italics% %is_header_underline%
+		Gui, Add, Text, section xs, % line
+
+		; revert back to normal 
+		Gui, Font, s%font_regular% norm
+	}
+
+}
+	; blank space 
+	Gui, Add, Text
+
+; makes the "SUBMIT" button big 
+gW := width_right_Texts + width_left_Texts
+Gui, Add, Button, xs hwndHButton w%gW% gSubmitIt, Submit 
+
+	; blank space 
+	Gui, Add, Text 
+
+Gui, Show, , Automated GUI  
+return 
+
+SubmitIt: 
+	Gui, Submit, NoHide 
+return 
+
+EM_SETCUEBANNER(text, hwnd) {
+	; set an HWND for the control, and use it here. 
+	; this sets a default text for the control 
+
+	SendMessage 0x1501, 1, "" text "",, ahk_id %hwnd% ; EM_SETCUEBANNER
+	; DllCall("SendMessage", "Ptr",  hwnd, "UInt", 0x1501, "Ptr", 1, "WStr", "" text "", "UInt") ; EM_SETCUEBANNER
+}
+
+GuiClose:
+*Esc::ExitApp 
+F8::Reload 
