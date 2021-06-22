@@ -25,6 +25,9 @@
 
 #SingleInstance, Force 
 
+default_Foreign_language := "fr"
+
+
 ; tray icon
 Menu, Tray, Icon, shell32.dll, 171
 
@@ -40,7 +43,7 @@ Menu, Tray, Icon, shell32.dll, 171
 
 	clipwait, 2 
 
-	str := Foreign(clipboard, detected)
+	str := Foreign(clipboard, default_Foreign_language)
 	; if we look up a single word, we'll get a list of synonyms. 
 	; so we check to see if the data returns a "+" as the second Lines and we ignore everything after it. 
 
@@ -82,7 +85,7 @@ CountClick:
 	    sleep, 10
 
 	    ; translate EN to detected language
-	    tl_Str := EN(Clipboard, detected)
+	    tl_Str := EN(Clipboard, default_Foreign_language)
 
 	    clipboard := oldClip 
 
@@ -133,13 +136,12 @@ return
 
 ; wrap around for gTranslate
 Foreign(str, lang := "en") {
-	global
 	return GoogleTranslate(str, "en", lang)
 
 }
 
 ; wrap around for gTranslate
-En(str, lang := "en"){ 
+En(str, byRef lang := "en"){ 
 	return GoogleTranslate(str, , , lang)
 }
 
