@@ -13,20 +13,27 @@
 #SingleInstance, Force 
 
 
+Gui, Add, Edit, vTheOCR w500 r30, 
+return 
+
 !#r:: 
-	filePath := Explorer_getSelected()
+    filePath := Explorer_getSelected()
 
-	; if no file selected 
-	if !FilePath 
-	{
-		MsgBOx, Sorry. Either no files were selected or AHK was unable to retrieve the path 
+    ; if no file selected 
+    if !FilePath 
+    {
+        MsgBOx, Sorry. Either no files were selected or AHK was unable to retrieve the path 
 
-		return
-	}
-	txt := ocr(filepath)
+        return
+    }
+    txt := ocr(filepath)
+    Gui, Show 
+    GuiControl, Text, TheOCR, % txt 
+return 
 
-	MsgBox, % (txt)
-ExitApp
+; press Control + ESC to close script
+^esc::ExitApp
+
 ; ============================================================
 ; Get the path of a selected item in explorer 
 ; taken from: 
