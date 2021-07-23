@@ -1,19 +1,57 @@
 /*
-	This script uses two libraries: 
-	
-	1) Explorer_GetSelected() to retrieve the path of the file you selected in your folder/explorer. Taken from:
+   This script uses two libraries: 
+   
+   1) Explorer_GetSelected() to retrieve the path of the file you selected in your folder/explorer. Taken from:
 
-	https://autohotkey.com/board/topic/60985-get-paths-of-selected-items-in-an-explorer-window/
+   https://autohotkey.com/board/topic/60985-get-paths-of-selected-items-in-an-explorer-window/
 
-	2) OCR() with UWP API, taken from:
-	
-	https://www.autohotkey.com/boards/viewtopic.php?t=72674
+   2) OCR() with UWP API, taken from:
+   
+   https://www.autohotkey.com/boards/viewtopic.php?t=72674
 
 */
 #SingleInstance, Force 
 
+; Turn ON Text-To-Speech?  
+; 1 = Yes, 0 = No 
+Text_To_Speech := 1
 
-Gui, Add, Edit, vTheOCR w500 r30, 
+; ---------------------
+; ---- GUI options ----
+; ---------------------
+
+; GUI_COLOR := 0x000000
+GUI_COLOR := 0x282923
+GUI_TEXT_BOX_COLOR :=  0x282923
+
+GUI_FONT_SIZE := 15
+GUI_FONT_COLOR := 0xDCDB74 
+
+; width and height of the GUI edit box. 
+; A width and height is needed. 
+w := 500
+h := 500
+
+; X and Y location where you want the GUI to pop out from. To set as default (center of screen), just put in two quotes (""). 
+; x := ""
+; y := "" 
+
+x := "" 
+y := "" 
+
+; ---------------------
+; -- END OF OPTIONS ---
+; ---------------------
+
+if !(x = "")
+   x := "x" x
+
+if !(y = "") 
+   y := "y" y 
+
+Gui, Color, % GUI_COLOR, % GUI_TEXT_BOX_COLOR
+Gui, Font, % "s" GUI_FONT_SIZE " c" GUI_FONT_COLOR
+Gui, Add, Edit, vTheOCR w%w% h%h% vScroll, 
 return 
 
 !#r:: 
@@ -27,12 +65,32 @@ return
         return
     }
     txt := ocr(filepath)
-    Gui, Show 
+    Gui, Show, %x% %y%
     GuiControl, Text, TheOCR, % txt 
+
+    sleep, 100
+    if (Text_to_Speech)
+      speak(txt)
 return 
 
 ; press Control + ESC to close script
 ^esc::ExitApp
+
+GuiClose:
+   Gui, Hide 
+   speak()
+return 
+
+speak(text := "")
+{
+    static voice := ComObjCreate("SAPI.SpVoice")
+    if (text = "")
+      ; turns off text 
+      voice.Speak("",0x1|0x2)
+    else 
+      ; reads text, async. 
+      voice.Speak(text,0x1)
+}
 
 ; ============================================================
 ; Get the path of a selected item in explorer 
@@ -41,101 +99,101 @@ return
 ; https://autohotkey.com/board/topic/60985-get-paths-of-selected-items-in-an-explorer-window/
 ; ============================================================
 /*
-	Library for getting info from a specific explorer window (if window handle not specified, the currently active
-	window will be used).  Requires AHK_L or similar.  Works with the desktop.  Does not currently work with save
-	dialogs and such.
-	
-	
-	Explorer_GetSelected(hwnd="")   - paths of target window's selected items
-	Explorer_GetAll(hwnd="")        - paths of all items in the target window's folder
-	Explorer_GetPath(hwnd="")       - path of target window's folder
-	
-	example:
-		F1::
-			path := Explorer_GetPath()
-			all := Explorer_GetAll()
-			sel := Explorer_GetSelected()
-			MsgBox % path
-			MsgBox % all
-			MsgBox % sel
-		return
-	
-	Joshua A. Kinnison
-	2011-04-27, 16:12
+   Library for getting info from a specific explorer window (if window handle not specified, the currently active
+   window will be used).  Requires AHK_L or similar.  Works with the desktop.  Does not currently work with save
+   dialogs and such.
+   
+   
+   Explorer_GetSelected(hwnd="")   - paths of target window's selected items
+   Explorer_GetAll(hwnd="")        - paths of all items in the target window's folder
+   Explorer_GetPath(hwnd="")       - path of target window's folder
+   
+   example:
+      F1::
+         path := Explorer_GetPath()
+         all := Explorer_GetAll()
+         sel := Explorer_GetSelected()
+         MsgBox % path
+         MsgBox % all
+         MsgBox % sel
+      return
+   
+   Joshua A. Kinnison
+   2011-04-27, 16:12
 */
 
 Explorer_GetPath(hwnd="")
 {
-	if !(window := Explorer_GetWindow(hwnd))
-		return ErrorLevel := "ERROR"
-	if (window="desktop")
-		return A_Desktop
-	path := window.LocationURL
-	path := RegExReplace(path, "ftp://.*@","ftp://")
-	StringReplace, path, path, file:///
-	StringReplace, path, path, /, \, All 
-	
-	; thanks to polyethene
-	Loop
-		If RegExMatch(path, "i)(?<=%)[\da-f]{1,2}", hex)
-			StringReplace, path, path, `%%hex%, % Chr("0x" . hex), All
-		Else Break
-	return path
+   if !(window := Explorer_GetWindow(hwnd))
+      return ErrorLevel := "ERROR"
+   if (window="desktop")
+      return A_Desktop
+   path := window.LocationURL
+   path := RegExReplace(path, "ftp://.*@","ftp://")
+   StringReplace, path, path, file:///
+   StringReplace, path, path, /, \, All 
+   
+   ; thanks to polyethene
+   Loop
+      If RegExMatch(path, "i)(?<=%)[\da-f]{1,2}", hex)
+         StringReplace, path, path, `%%hex%, % Chr("0x" . hex), All
+      Else Break
+   return path
 }
 Explorer_GetAll(hwnd="")
 {
-	return Explorer_Get(hwnd)
+   return Explorer_Get(hwnd)
 }
 Explorer_GetSelected(hwnd="")
 {
-	return Explorer_Get(hwnd,true)
+   return Explorer_Get(hwnd,true)
 }
 
 Explorer_GetWindow(hwnd="")
 {
-	; thanks to jethrow for some pointers here
+   ; thanks to jethrow for some pointers here
     WinGet, process, processName, % "ahk_id" hwnd := hwnd? hwnd:WinExist("A")
     WinGetClass class, ahk_id %hwnd%
-	
-	if (process!="explorer.exe")
-		return
-	if (class ~= "(Cabinet|Explore)WClass")
-	{
-		for window in ComObjCreate("Shell.Application").Windows
-			if (window.hwnd==hwnd)
-				return window
-	}
-	else if (class ~= "Progman|WorkerW") 
-		return "desktop" ; desktop found
+   
+   if (process!="explorer.exe")
+      return
+   if (class ~= "(Cabinet|Explore)WClass")
+   {
+      for window in ComObjCreate("Shell.Application").Windows
+         if (window.hwnd==hwnd)
+            return window
+   }
+   else if (class ~= "Progman|WorkerW") 
+      return "desktop" ; desktop found
 }
 Explorer_Get(hwnd="",selection=false)
 {
-	if !(window := Explorer_GetWindow(hwnd))
-		return ErrorLevel := "ERROR"
-	if (window="desktop")
-	{
-		ControlGet, hwWindow, HWND,, SysListView321, ahk_class Progman
-		if !hwWindow ; #D mode
-			ControlGet, hwWindow, HWND,, SysListView321, A
-		ControlGet, files, List, % ( selection ? "Selected":"") "Col1",,ahk_id %hwWindow%
-		base := SubStr(A_Desktop,0,1)=="\" ? SubStr(A_Desktop,1,-1) : A_Desktop
-		Loop, Parse, files, `n, `r
-		{
-			path := base "\" A_LoopField
-			IfExist %path% ; ignore special icons like Computer (at least for now)
-				ret .= path "`n"
-		}
-	}
-	else
-	{
-		if selection
-			collection := window.document.SelectedItems
-		else
-			collection := window.document.Folder.Items
-		for item in collection
-			ret .= item.path "`n"
-	}
-	return Trim(ret,"`n")
+   if !(window := Explorer_GetWindow(hwnd))
+      return ErrorLevel := "ERROR"
+   if (window="desktop")
+   {
+      ControlGet, hwWindow, HWND,, SysListView321, ahk_class Progman
+      if !hwWindow ; #D mode
+         ControlGet, hwWindow, HWND,, SysListView321, A
+      ControlGet, files, List, % ( selection ? "Selected":"") "Col1",,ahk_id %hwWindow%
+      base := SubStr(A_Desktop,0,1)=="\" ? SubStr(A_Desktop,1,-1) : A_Desktop
+      Loop, Parse, files, `n, `r
+      {
+         path := base "\" A_LoopField
+         IfExist %path% ; ignore special icons like Computer (at least for now)
+            ret .= path "`n"
+      }
+   }
+   else
+   {
+      if selection
+         collection := window.document.SelectedItems
+      else
+         collection := window.document.Folder.Items
+      for item in collection
+         ret .= item.path "`n"
+   }
+   return Trim(ret,"`n")
 }
 
 ; ============================================================
@@ -196,7 +254,7 @@ ocr(file, lang := "FirstFromAvailableLanguages")
       if (OcrEngine = 0)
       {
          msgbox Can not use language "%lang%" for OCR, please install language pack.
-         ExitApp
+         return 
       }
       CurrentLanguage := lang
    }
@@ -205,7 +263,7 @@ ocr(file, lang := "FirstFromAvailableLanguages")
    if !FileExist(file) or InStr(FileExist(file), "D")
    {
       msgbox File "%file%" does not exist
-      ExitApp
+      return
    }
    VarSetCapacity(GUID, 16)
    DllCall("ole32\CLSIDFromString", "wstr", IID_RandomAccessStream := "{905A0FE1-BC53-11DF-8C49-001E4FC686DA}", "ptr", &GUID)
@@ -218,7 +276,7 @@ ocr(file, lang := "FirstFromAvailableLanguages")
    if (width > MaxDimension) or (height > MaxDimension)
    {
       msgbox Image is to big - %width%x%height%.`nIt should be maximum - %MaxDimension% pixels
-      ExitApp
+      return
    }
    BitmapFrameWithSoftwareBitmap := ComObjQuery(BitmapDecoder, IBitmapFrameWithSoftwareBitmap := "{FE287C9A-420C-4963-87AD-691436E08383}")
    DllCall(NumGet(NumGet(BitmapFrameWithSoftwareBitmap+0)+6*A_PtrSize), "ptr", BitmapFrameWithSoftwareBitmap, "ptr*", SoftwareBitmap)   ; GetSoftwareBitmapAsync
@@ -267,7 +325,7 @@ CreateClass(string, interface, ByRef Class)
          msgbox Class not registered
       else
          msgbox error: %result%
-      ExitApp
+      return
    }
    DeleteHString(hString)
 }
@@ -294,7 +352,7 @@ WaitForAsync(ByRef Object)
          {
             DllCall(NumGet(NumGet(AsyncInfo+0)+8*A_PtrSize), "ptr", AsyncInfo, "uint*", ErrorCode)   ; IAsyncInfo.ErrorCode
             msgbox AsyncInfo status error: %ErrorCode%
-            ExitApp
+            return
          }
          ObjRelease(AsyncInfo)
          break
