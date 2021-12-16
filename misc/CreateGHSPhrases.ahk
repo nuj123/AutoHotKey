@@ -157,7 +157,7 @@ F1::
 	}
 
 	MsgBox, % string 
-	print(string)
+	; print(string)
 	return 
 
 *Esc::ExitApp 
