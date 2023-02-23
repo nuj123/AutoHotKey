@@ -1,6 +1,6 @@
 /*
-    find_subset_sum(numbers, target_sum)
-    
+    SYNTAX:  find_subset_sum(numbers, target_sum)
+
         numbers = an array of numbers. ex: [1,2,3,4]
         target_sum = the number that you need to get to. ex: 10
 
@@ -11,7 +11,6 @@
 
             subset: the list (csv) of values that added up to our target sum.
 
-
         example code:
 */
 
@@ -19,7 +18,7 @@
     numbers := "1,2,3,4,5"
 
     ; the target of the sum to reach with our possibilities of numbers
-    target_sum := 12
+    target_sum := 17
 
     ; convert our number list to array, splitting at the commas
     numbers_array := StrSplit(numbers, ",")
@@ -39,6 +38,10 @@
     {
         MsgBox, % "No subset of [" numbers "] adds up to " target_sum "."
     }
+
+ExitApp
+return
+
 
 ; **********************************
 ; THE FUNCTION
