@@ -19,7 +19,7 @@
     numbers := "1,2,3,4,5"
 
     ; the target of the sum to reach with our possibilities of numbers
-    target_sum := 17
+    target_sum := 12
 
     ; convert our number list to array, splitting at the commas
     numbers_array := StrSplit(numbers, ",")
